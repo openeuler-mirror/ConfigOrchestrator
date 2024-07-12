@@ -1,0 +1,3 @@
+[submodule "libyui"]
+	path = libyui
+	url = https://github.com/libyui/libyui.git
