@@ -1,0 +1,15 @@
+Checks: >
+  readability-identifier-naming,
+  clang-analyzer-deadcode.DeadStores,
+  unused-using-decls,
+  modernize-*,
+  bugprone-*,
+  performance-*,
+  readability-*,
+  cppcoreguidelines-avoid-magic-numbers,
+  cppcoreguidelines-narrowing-conversions,
+  misc-unused-parameters
+WarningsAsErrors: '*'
+HeaderFilterRegex: '.*'
+AnalyzeTemporaryDtors: false
+FormatStyle: none

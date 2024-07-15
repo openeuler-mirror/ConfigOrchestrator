@@ -18,7 +18,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     message("Building in Release mode")
 else()
     message("Building in Debug mode")
-    option()(ADDRESS_SANITIZER "Enable AddressSanitizer" ON)
+    option(ADDRESS_SANITIZER "Enable AddressSanitizer" ON)
     option(THREAD_SANITIZER "Enable ThreadSanitizer" OFF)
 
     if(THREAD_SANITIZER)
@@ -30,15 +30,36 @@ else()
     endif()
 endif()
 
-add_custom_target(build_libyui ALL
-  COMMAND ${CMAKE_COMMAND} -E echo "Building libyui..."
-  COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_SOURCE_DIR}/libyui ./build_all
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/libyui
-)
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+  set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+  set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+endif()
 
-link_directories(${CMAKE_SOURCE_DIR}/libyui/build)
-include_directories(${CMAKE_SOURCE_DIR}/libyui/include)
+find_program(CLANG_TIDY_EXE NAMES clang-tidy)
+if(CLANG_TIDY_EXE)
+  message(STATUS "Found clang-tidy: ${CLANG_TIDY_EXE}")
+  set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE}")
+else()
+  message(STATUS "clang-tidy not found.")
+endif()
 
-add_executable(controlpane main.cc)
-target_link_libraries(controlpane PRIVATE yui)
-add_dependencies(controlpane build_libyui)
+set(SOURCES src/main.cc)
+
+find_program(CLANG_FORMAT_EXE NAMES clang-format)
+if(CLANG_FORMAT_EXE)
+  message(STATUS "Found clang-format: ${CLANG_FORMAT_EXE}")
+  add_custom_target(
+    clang_format
+    COMMAND ${CLANG_FORMAT_EXE} -i ${SOURCES}
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    COMMENT "Running clang-format on source files"
+  )
+else()
+  message(STATUS "clang-format not found.")
+endif()
+
+include_directories(/usr/include/yui)
+
+add_executable(${PROJECT_NAME} ${SOURCES})
+target_link_libraries(${PROJECT_NAME} yui)
