@@ -44,7 +44,15 @@ else()
   message(STATUS "clang-tidy not found.")
 endif()
 
-set(SOURCES src/main.cc)
+set(SOURCES src/controlpane.cc
+
+            src/backend/config_registry.cc
+            src/backend/config_item_base.cc
+            src/backend/firewall_config.cc
+            src/backend/package_config.cc
+
+            src/frontend/ui_base.cc
+)
 
 find_program(CLANG_FORMAT_EXE NAMES clang-format)
 if(CLANG_FORMAT_EXE)
@@ -59,6 +67,7 @@ else()
   message(STATUS "clang-format not found.")
 endif()
 
+include_directories(include)
 include_directories(/usr/include/yui)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
