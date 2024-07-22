@@ -44,14 +44,26 @@ else()
   message(STATUS "clang-tidy not found.")
 endif()
 
-set(SOURCES src/controlpane.cc
+set(MAIN_SOURCES
+    src/controlpane.cc
+)
 
-            src/backend/config_registry.cc
-            src/backend/config_item_base.cc
-            src/backend/firewall_config.cc
-            src/backend/package_config.cc
+set(FRONT_SOURCES
+    src/frontend/ui_base.cc
+    src/frontend/main_menu.cc
+)
 
-            src/frontend/ui_base.cc
+set(BACK_SOURCES
+    src/backend/config_registry.cc
+    src/backend/config_item_base.cc
+    src/backend/firewall_config.cc
+    src/backend/package_config.cc
+)
+
+set(SOURCES
+    ${MAIN_SOURCES}
+    ${FRONT_SOURCES}
+    ${BACK_SOURCES}
 )
 
 find_program(CLANG_FORMAT_EXE NAMES clang-format)

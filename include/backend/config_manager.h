@@ -4,6 +4,7 @@
 
 #include "config_factory.h"
 #include "config_item_base.h"
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -20,6 +21,8 @@ public:
     return configs;
   }
 
+  auto hasUnsavedConfig() -> bool { return !unsavedConfigs.empty(); }
+
 private:
   void loadAllConfigs() {
     std::vector<std::string> configNames =
@@ -33,6 +36,7 @@ private:
   }
 
   std::vector<std::shared_ptr<ConfigItemBase>> configs;
+  std::vector<std::function<void(void)>> unsavedConfigs;
 };
 
 #endif // CONFIG_MANAGER_H_
