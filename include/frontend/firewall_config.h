@@ -1,14 +1,16 @@
 #ifndef FIREWALL_CONFIG_H
 #define FIREWALL_CONFIG_H
 
+#include "backend/firewall_backend.h"
 #include "ui_base.h"
+#include <memory>
 
 class FirewallConfig : public UIBase {
 public:
   FirewallConfig(const std::string &name,
                  const std::shared_ptr<ConfigManager> &manager,
                  const std::shared_ptr<UIBase> &parent)
-      : UIBase(name, manager, parent){};
+      : UIBase(name, manager, parent, std::make_shared<FirewallBackend>()){};
 
   ~FirewallConfig() override = default;
 

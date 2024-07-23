@@ -32,15 +32,17 @@
 #include <yui/YWidgetFactory.h>
 
 class ConfigManager;
+class ConfigBackendBase;
 
 using config_id_t = uint32_t;
 
 class UIBase : public std::enable_shared_from_this<UIBase> {
 public:
   UIBase(std::string name, const std::shared_ptr<ConfigManager> &manager,
-         const std::shared_ptr<UIBase> &parent)
+         const std::shared_ptr<UIBase> &parent,
+         std::shared_ptr<ConfigBackendBase> backend = nullptr)
       : name_(std::move(name)), manager_(manager), parent_(parent),
-        main_dialog_(nullptr) {
+        backend_(std::move(backend)), main_dialog_(nullptr) {
     factory_ = YUI::widgetFactory();
   }
 
@@ -79,6 +81,8 @@ private:
   std::weak_ptr<ConfigManager> manager_;
   std::weak_ptr<UIBase> parent_;
   std::vector<std::shared_ptr<UIBase>> children_;
+
+  std::shared_ptr<ConfigBackendBase> backend_;
 
   YWidgetFactory *factory_;
   YDialog *main_dialog_;

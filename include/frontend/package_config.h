@@ -1,6 +1,7 @@
 #ifndef package_config_H
 #define package_config_H
 
+#include "backend/package_manager_backend.h"
 #include "ui_base.h"
 #include <memory>
 
@@ -9,7 +10,8 @@ public:
   PackageManagerConfig(const std::string &name,
                        const std::shared_ptr<ConfigManager> &manager,
                        const std::shared_ptr<UIBase> &parent)
-      : UIBase(name, manager, parent){};
+      : UIBase(name, manager, parent,
+               std::make_shared<PackageManagerBackend>()){};
 
   ~PackageManagerConfig() override = default;
 

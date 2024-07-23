@@ -7,7 +7,7 @@
 
 class ConfigBackendBase {
 public:
-  ConfigBackendBase(std::string name);
+  ConfigBackendBase() = default;
   virtual ~ConfigBackendBase() = default;
 
 private:

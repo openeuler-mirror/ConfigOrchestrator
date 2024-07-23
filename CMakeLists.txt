@@ -57,6 +57,8 @@ set(FRONT_SOURCES
 
 set(BACK_SOURCES
     src/backend/config_backend_base.cc
+    src/backend/firewall_backend.cc
+    src/backend/package_manager_backend.cc
 )
 
 set(SOURCES
