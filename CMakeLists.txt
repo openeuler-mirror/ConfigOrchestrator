@@ -83,5 +83,21 @@ endif()
 include_directories(include)
 include_directories(/usr/include/yui)
 
+find_library(YUI_LIB yui REQUIRED)
+find_path(YUI_INCLUDE_DIR yui REQUIRED)
+
+find_library(IPTC_LIB ip4tc ip6tc REQUIRED)
+find_path(IPTC_INCLUDE_DIR libipt/libiptc.h REQUIRED)
+include_directories(${IPTC_INCLUDE_DIR})
+
 add_executable(${PROJECT_NAME} ${SOURCES})
-target_link_libraries(${PROJECT_NAME} yui)
+target_link_libraries(${PROJECT_NAME} ${YUI_LIB})
+target_link_libraries(${PROJECT_NAME} ${IPTC_LIB})
+
+# Testing
+option(BUILD_TESTS "Build tests" ON)
+
+if (BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(test)
+endif()
