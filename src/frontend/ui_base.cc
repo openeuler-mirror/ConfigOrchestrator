@@ -2,6 +2,8 @@
 #include "YDialog.h"
 #include "YLabel.h"
 #include "YTypes.h"
+#include "backend/config_manager.h"
+
 #include <exception>
 #include <string>
 
@@ -112,7 +114,8 @@ auto UIBase::handleExit() const -> bool {
 auto UIBase::handleButtons(YEvent *event) const {
   if (event->widget() == close_button_ ||
       event->eventType() == YEvent::CancelEvent) {
-    if (manager_->hasUnsavedConfig()) {
+    auto manager = manager_.lock();
+    if (manager && manager->hasUnsavedConfig()) {
       auto real_exit = handleExit();
       if (real_exit) {
         YDialog::deleteAllDialogs();
@@ -158,4 +161,32 @@ auto UIBase::handleEvent() -> std::function<void()> {
       }
     }
   };
+}
+
+[[nodiscard]] auto UIBase::GetManager() const -> std::weak_ptr<ConfigManager> {
+  return manager_;
+}
+
+[[nodiscard]] auto UIBase::GetChildren() const
+    -> std::vector<std::shared_ptr<UIBase>> {
+  return children_;
+}
+
+auto UIBase::init() -> bool {
+  auto manager = manager_.lock();
+  if (!manager) {
+    yuiError() << "Manager is not available" << std::endl;
+    return false;
+  }
+
+  auto parent = shared_from_this();
+  auto children = GetChildrenInitializer();
+  for (auto &child : children) {
+    auto child_instance = child(manager, parent);
+    children_.emplace_back(child_instance);
+
+    child_instance->init();
+  }
+
+  return true;
 }

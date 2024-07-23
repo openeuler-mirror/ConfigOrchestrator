@@ -51,13 +51,12 @@ set(MAIN_SOURCES
 set(FRONT_SOURCES
     src/frontend/ui_base.cc
     src/frontend/main_menu.cc
+    src/frontend/firewall_config.cc
+    src/frontend/package_config.cc
 )
 
 set(BACK_SOURCES
-    src/backend/config_registry.cc
-    src/backend/config_item_base.cc
-    src/backend/firewall_config.cc
-    src/backend/package_config.cc
+    src/backend/config_backend_base.cc
 )
 
 set(SOURCES

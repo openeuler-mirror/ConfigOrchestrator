@@ -2,41 +2,21 @@
 #ifndef CONFIG_MANAGER_H_
 #define CONFIG_MANAGER_H_
 
-#include "config_factory.h"
-#include "config_item_base.h"
+#include "frontend/ui_base.h"
+
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <vector>
 
 class ConfigManager {
 public:
-  ConfigManager() { loadAllConfigs(); }
+  ConfigManager() = default;
 
-  void addConfig(const std::shared_ptr<ConfigItemBase> &config) {
-    configs.push_back(config);
-  }
-
-  [[nodiscard]] auto getConfigs() const
-      -> const std::vector<std::shared_ptr<ConfigItemBase>> & {
-    return configs;
-  }
-
-  auto hasUnsavedConfig() -> bool { return !unsavedConfigs.empty(); }
+  auto hasUnsavedConfig() -> bool { return !unsavedConfigs_.empty(); }
 
 private:
-  void loadAllConfigs() {
-    std::vector<std::string> configNames =
-        ConfigFactory::instance().getRegisteredConfigNames();
-    for (const auto &name : configNames) {
-      auto config = ConfigFactory::instance().createConfig(name);
-      if (config) {
-        addConfig(config);
-      }
-    }
-  }
-
-  std::vector<std::shared_ptr<ConfigItemBase>> configs;
-  std::vector<std::function<void(void)>> unsavedConfigs;
+  std::vector<std::function<void(void)>> unsavedConfigs_;
 };
 
 #endif // CONFIG_MANAGER_H_

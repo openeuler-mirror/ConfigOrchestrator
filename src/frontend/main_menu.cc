@@ -1,11 +1,9 @@
 #include "frontend/main_menu.h"
+#include "frontend/firewall_config.h"
+#include "frontend/package_config.h"
+
 #include <iostream>
 #include <string>
-
-static void occupy(YLayoutBox *layout) {
-  [[maybe_unused]] YLabel *label =
-      YUI::widgetFactory()->createOutputField(layout, "OCCPUATION");
-}
 
 auto MainMenu::userDisplay()
     -> std::function<DisplayResult(YDialog *main_dialog,
@@ -26,6 +24,7 @@ auto MainMenu::userHandleEvent() -> std::function<HandleResult(YEvent *event)> {
     return HandleResult{};
   };
 }
+
 auto MainMenu::GetComponentDescription() const -> std::string {
   static std::string componentDescription =
       R"(Main Menu of Control Panel of OpenEuler.
@@ -37,4 +36,19 @@ auto MainMenu::GetComponentDescription() const -> std::string {
 auto MainMenu::GetComponentName() const -> std::string {
   static std::string componentName = "Main Menu";
   return componentName;
+}
+
+auto MainMenu::GetChildrenInitializer() const -> std::vector<std::function<
+    std::shared_ptr<UIBase>(const std::shared_ptr<ConfigManager> &manager,
+                            const std::shared_ptr<UIBase> &parent)>> {
+  return {
+      [name = "Network Config"](const std::shared_ptr<ConfigManager> &manager,
+                                const std::shared_ptr<UIBase> &parent) {
+        return std::make_shared<FirewallConfig>(name, manager, parent);
+      },
+      [name = "Package Manager Config"](
+          const std::shared_ptr<ConfigManager> &manager,
+          const std::shared_ptr<UIBase> &parent) {
+        return std::make_shared<PackageManagerConfig>(name, manager, parent);
+      }};
 }

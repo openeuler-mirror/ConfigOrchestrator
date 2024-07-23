@@ -1,16 +1,16 @@
 #ifndef ui_base_H
 #define ui_base_H
 
-#include <functional>
-
 #include "YDialog.h"
 #include "YEvent.h"
 #include "YLabel.h"
 #include "YLayoutBox.h"
 #include "YUI.h"
 #include "YWidgetFactory.h"
-#include "backend/config_manager.h"
 #include "controlpane.h"
+
+#include <cstdint>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <ncurses.h>
@@ -31,10 +31,16 @@
 #include <yui/YUI.h>
 #include <yui/YWidgetFactory.h>
 
-class UIBase {
+class ConfigManager;
+
+using config_id_t = uint32_t;
+
+class UIBase : public std::enable_shared_from_this<UIBase> {
 public:
-  UIBase(std::string name, std::shared_ptr<ConfigManager> manager)
-      : name_(std::move(name)), manager_(std::move(manager)) {
+  UIBase(std::string name, const std::shared_ptr<ConfigManager> &manager,
+         const std::shared_ptr<UIBase> &parent)
+      : name_(std::move(name)), manager_(manager), parent_(parent),
+        main_dialog_(nullptr) {
     factory_ = YUI::widgetFactory();
   }
 
@@ -48,13 +54,29 @@ public:
 
   auto handleEvent() -> std::function<void()>;
 
+  auto init() -> bool;
+
+  [[nodiscard]] auto GetManager() const -> std::weak_ptr<ConfigManager>;
+
+  [[nodiscard]] auto GetChildren() const
+      -> std::vector<std::shared_ptr<UIBase>>;
+
   [[nodiscard]] virtual auto GetComponentDescription() const -> std::string = 0;
 
   [[nodiscard]] virtual auto GetComponentName() const -> std::string = 0;
 
+  [[nodiscard]] virtual auto GetChildrenInitializer() const
+      -> std::vector<std::function<
+          std::shared_ptr<UIBase>(const std::shared_ptr<ConfigManager> &manager,
+                                  const std::shared_ptr<UIBase> &parent)>> = 0;
+
+  auto isMainMenu() -> bool { return parent_.expired(); }
+
 private:
   std::string name_;
-  std::shared_ptr<ConfigManager> manager_;
+  std::weak_ptr<ConfigManager> manager_;
+  std::weak_ptr<UIBase> parent_;
+  std::vector<std::shared_ptr<UIBase>> children_;
 
   YWidgetFactory *factory_;
   YDialog *main_dialog_;

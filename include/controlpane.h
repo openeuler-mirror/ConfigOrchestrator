@@ -8,7 +8,7 @@
 #include "YLayoutBox.h"
 #include "YUI.h"
 #include "YWidgetFactory.h"
-#include "backend/config_manager.h"
+
 #include <iostream>
 #include <memory>
 #include <ncurses.h>
@@ -49,6 +49,11 @@ static void YUIUnImpl(const std::string &component) {
   fac->createPushButton(vbox, "OK");
   dialog->waitForEvent();
   dialog->destroy();
+}
+
+static void occupy(YLayoutBox *layout) {
+  [[maybe_unused]] YLabel *label =
+      YUI::widgetFactory()->createOutputField(layout, "OCCPUATION");
 }
 
 #endif
