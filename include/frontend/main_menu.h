@@ -1,11 +1,13 @@
 #ifndef MAIN_MENU_H
 #define MAIN_MENU_H
 
+#include "YPushButton.h"
 #include "backend/config_manager.h"
 #include "frontend/ui_base.h"
 
 #include <memory>
 #include <utility>
+#include <vector>
 
 class MainMenu : public UIBase {
 public:
@@ -30,6 +32,8 @@ private:
                                      YLayoutBox *main_layout_)> override;
 
   auto userHandleEvent() -> std::function<HandleResult(YEvent *event)> override;
+
+  std::vector<YPushButton *> menu_buttons_;
 };
 
 #endif

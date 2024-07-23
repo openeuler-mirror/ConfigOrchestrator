@@ -13,6 +13,7 @@ auto main([[maybe_unused]] int argc, [[maybe_unused]] char **argv) -> int {
 
   auto configManager = std::make_shared<ConfigManager>();
   auto menu = std::make_shared<MainMenu>("Main Menu", configManager);
+  menu->init();
 
   auto display = menu->display();
   display();

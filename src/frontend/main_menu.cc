@@ -2,6 +2,7 @@
 #include "frontend/firewall_config.h"
 #include "frontend/package_config.h"
 
+#include <cstddef>
 #include <iostream>
 #include <string>
 
@@ -10,17 +11,32 @@ auto MainMenu::userDisplay()
                                    YLayoutBox *main_layout_)> {
   return
       [this](YDialog *main_dialog, YLayoutBox *main_layout_) -> DisplayResult {
-        std::cout << "displaying MainMenu with dialog: " << main_dialog
-                  << " and layout: " << main_layout_ << std::endl;
+        (void)main_dialog;
 
-        occupy(main_layout_);
+        for (const auto &child : GetChildren()) {
+          auto *button = GetFactory()->createPushButton(
+              main_layout_, child->GetComponentName());
+
+          menu_buttons_.emplace_back(button);
+        }
 
         return DisplayResult::SUCCESS;
       };
 }
 
 auto MainMenu::userHandleEvent() -> std::function<HandleResult(YEvent *event)> {
-  return []([[maybe_unused]] YEvent *event) -> HandleResult {
+  return [this]([[maybe_unused]] YEvent *event) -> HandleResult {
+    for (size_t i = 0; i < menu_buttons_.size(); i++) {
+      if (event->widget() == menu_buttons_[i]) {
+        auto display = GetChildren()[i]->display();
+        display();
+
+        auto handler = GetChildren()[i]->handleEvent();
+        handler();
+
+        break;
+      }
+    }
     return HandleResult{};
   };
 }

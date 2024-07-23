@@ -61,6 +61,8 @@ public:
   [[nodiscard]] auto GetChildren() const
       -> std::vector<std::shared_ptr<UIBase>>;
 
+  [[nodiscard]] auto GetFactory() const -> YWidgetFactory *;
+
   [[nodiscard]] virtual auto GetComponentDescription() const -> std::string = 0;
 
   [[nodiscard]] virtual auto GetComponentName() const -> std::string = 0;

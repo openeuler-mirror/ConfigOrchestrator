@@ -172,6 +172,10 @@ auto UIBase::handleEvent() -> std::function<void()> {
   return children_;
 }
 
+[[nodiscard]] auto UIBase::GetFactory() const -> YWidgetFactory * {
+  return factory_;
+}
+
 auto UIBase::init() -> bool {
   auto manager = manager_.lock();
   if (!manager) {
