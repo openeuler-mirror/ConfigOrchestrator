@@ -1,8 +1,11 @@
-#include "frontend/ui_base.h"
+
 #include "YDialog.h"
 #include "YLabel.h"
 #include "YTypes.h"
+
 #include "backend/config_manager.h"
+#include "frontend/ui_base.h"
+#include "tools/cplog.h"
 
 #include <cassert>
 #include <cstdlib>

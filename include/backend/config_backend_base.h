@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <string>
+#include <unistd.h>
 #include <vector>
 
 class ConfigBackendBase {

@@ -49,22 +49,31 @@ set(MAIN_SOURCES
 )
 
 set(FRONT_SOURCES
-    src/frontend/ui_base.cc
-    src/frontend/main_menu.cc
-    src/frontend/firewall_config.cc
-    src/frontend/package_config.cc
+    ${CMAKE_SOURCE_DIR}/src/frontend/ui_base.cc
+    ${CMAKE_SOURCE_DIR}/src/frontend/main_menu.cc
+    ${CMAKE_SOURCE_DIR}/src/frontend/firewall_config.cc
+    ${CMAKE_SOURCE_DIR}/src/frontend/package_config.cc
 )
 
 set(BACK_SOURCES
-    src/backend/config_backend_base.cc
-    src/backend/firewall_backend.cc
-    src/backend/package_manager_backend.cc
+    ${CMAKE_SOURCE_DIR}/src/backend/config_backend_base.cc
+    ${CMAKE_SOURCE_DIR}/src/backend/firewall_backend.cc
+    ${CMAKE_SOURCE_DIR}/src/backend/package_manager_backend.cc
+)
+
+set(TOOL_SOURCES
+    ${CMAKE_SOURCE_DIR}/src/tools/sys.cc
+)
+
+set(NON_MAIN_SOURCES
+    ${TOOL_SOURCES}
+    ${FRONT_SOURCES}
+    ${BACK_SOURCES}
 )
 
 set(SOURCES
     ${MAIN_SOURCES}
-    ${FRONT_SOURCES}
-    ${BACK_SOURCES}
+    ${NON_MAIN_SOURCES}
 )
 
 find_program(CLANG_FORMAT_EXE NAMES clang-format)

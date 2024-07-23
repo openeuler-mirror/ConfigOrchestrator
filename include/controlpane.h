@@ -29,9 +29,6 @@
 #include <yui/YUI.h>
 #include <yui/YWidgetFactory.h>
 
-#define YUILogComponent "controlpane"
-#include <yui/YUILog.h>
-
 enum class HandleResult : unsigned int { SUCCESS, BREAK, EXIT, NEW_PAGE };
 
 enum class DisplayResult : unsigned int { SUCCESS, ERROR };

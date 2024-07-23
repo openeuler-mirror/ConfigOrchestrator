@@ -2,6 +2,7 @@
 #include <memory>
 
 #include "backend/firewall_backend.h"
+#include "tools/cplog.h"
 
 class FirewallTest : public ::testing::Test {
 protected:
@@ -12,7 +13,14 @@ protected:
   std::shared_ptr<FirewallBackend> fwb;
 };
 
-TEST_F(FirewallTest, get_chain) {}
+TEST_F(FirewallTest, get_chain) {
+  auto chains = fwb->getAllIPChain(0);
+  for (const auto &chain : chains) {
+    yuiMilestone() << "Chain: " << chain << std::endl;
+  }
+
+  ASSERT_EQ(chains.size(), 3);
+}
 
 auto main(int argc, char **argv) -> int {
   ::testing::InitGoogleTest(&argc, argv);
