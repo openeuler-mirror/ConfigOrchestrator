@@ -11,7 +11,7 @@ include_directories(${GTEST_INCLUDE_DIR})
 
 function(add_gtest test_name test_source)
     add_executable(${test_name} ${test_source})
-    target_link_libraries(${test_name} ${GTEST_LIBRARIES} pthread)
+    target_link_libraries(${test_name} ${GTEST_LIB} ${ALL_LIBS} pthread)
     add_test(NAME ${test_name} COMMAND ${test_name})
 endfunction()
 

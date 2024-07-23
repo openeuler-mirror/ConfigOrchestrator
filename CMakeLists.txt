@@ -90,9 +90,10 @@ find_library(IPTC_LIB ip4tc ip6tc REQUIRED)
 find_path(IPTC_INCLUDE_DIR libipt/libiptc.h REQUIRED)
 include_directories(${IPTC_INCLUDE_DIR})
 
+set(ALL_LIBS ${YUI_LIB} ${IPTC_LIB})
+
 add_executable(${PROJECT_NAME} ${SOURCES})
-target_link_libraries(${PROJECT_NAME} ${YUI_LIB})
-target_link_libraries(${PROJECT_NAME} ${IPTC_LIB})
+target_link_libraries(${PROJECT_NAME} ${ALL_LIBS})
 
 # Testing
 option(BUILD_TESTS "Build tests" ON)
