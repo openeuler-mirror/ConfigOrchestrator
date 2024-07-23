@@ -4,6 +4,8 @@
 #include "YTypes.h"
 #include "backend/config_manager.h"
 
+#include <cassert>
+#include <cstdlib>
 #include <exception>
 #include <string>
 
@@ -111,19 +113,19 @@ auto UIBase::handleExit() const -> bool {
   return event->widget() == exit_button;
 }
 
-auto UIBase::handleButtons(YEvent *event) const {
+auto UIBase::handleButtons(YEvent *event) -> HandleResult {
   if (event->widget() == close_button_ ||
       event->eventType() == YEvent::CancelEvent) {
     auto manager = manager_.lock();
+
+    auto real_exit = true;
     if (manager && manager->hasUnsavedConfig()) {
-      auto real_exit = handleExit();
-      if (real_exit) {
-        YDialog::deleteAllDialogs();
-        std::exit(0);
-      }
-    } else {
+      real_exit = handleExit();
+    }
+
+    if (real_exit) {
       YDialog::deleteAllDialogs();
-      std::exit(0);
+      return HandleResult::EXIT;
     }
   }
 
@@ -131,15 +133,28 @@ auto UIBase::handleButtons(YEvent *event) const {
     handleHelp();
   }
 
+  if (event->widget() == back_button_) {
+    assert(main_dialog_ != nullptr);
+
+    main_dialog_->destroy();
+    main_dialog_ = nullptr;
+    return HandleResult::BREAK;
+  }
+
   if (event->widget() == search_button_) {
     YUIUnImpl("Search Button");
   }
-  if (event->widget() == back_button_) {
-    YUIUnImpl("Back Button");
-  }
   if (event->widget() == apply_button_) {
     YUIUnImpl("Apply Button");
+
+    auto manager = manager_.lock();
+    if (!manager) {
+      yuiError() << "Manager is not available when searching" << std::endl;
+      return HandleResult::EXIT;
+    }
   }
+
+  return HandleResult::SUCCESS;
 }
 
 auto UIBase::handleEvent() -> std::function<void()> {
@@ -153,7 +168,12 @@ auto UIBase::handleEvent() -> std::function<void()> {
         std::terminate();
       }
 
-      handleButtons(event);
+      auto res = handleButtons(event);
+      if (res == HandleResult::EXIT) {
+        std::exit(0);
+      } else if (res == HandleResult::BREAK) {
+        break;
+      }
 
       auto user_result = user_handler(event);
       if (user_result == HandleResult::EXIT) {

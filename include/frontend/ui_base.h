@@ -117,7 +117,7 @@ private:
   virtual auto userHandleEvent()
       -> std::function<HandleResult(YEvent *event)> = 0;
 
-  [[nodiscard]] auto handleButtons(YEvent *event) const;
+  [[nodiscard]] auto handleButtons(YEvent *event) -> HandleResult;
 
   [[nodiscard]] auto handleHelp() const;
 
