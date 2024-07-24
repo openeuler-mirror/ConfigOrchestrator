@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.17)
-project(controlpane)
+project(controlpanel)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 set(CMAKE_C_COMPILER "gcc")
