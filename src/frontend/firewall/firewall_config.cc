@@ -1,4 +1,4 @@
-#include "frontend/firewall_config.h"
+#include "frontend/firewall/firewall_config.h"
 
 auto FirewallConfig::userDisplay()
     -> std::function<DisplayResult(YDialog *main_dialog,

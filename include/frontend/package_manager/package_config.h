@@ -1,8 +1,8 @@
 #ifndef package_config_H
 #define package_config_H
 
-#include "backend/package_manager_backend.h"
-#include "ui_base.h"
+#include "backend/package_manager/package_manager_backend.h"
+#include "frontend/ui_base.h"
 #include <memory>
 
 class PackageManagerConfig : public UIBase {

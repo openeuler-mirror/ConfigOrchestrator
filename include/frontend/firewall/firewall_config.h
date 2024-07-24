@@ -1,8 +1,8 @@
 #ifndef FIREWALL_CONFIG_H
 #define FIREWALL_CONFIG_H
 
-#include "backend/firewall_backend.h"
-#include "ui_base.h"
+#include "backend/firewall/firewall_backend.h"
+#include "frontend/ui_base.h"
 #include <memory>
 
 class FirewallConfig : public UIBase {

@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <memory>
 
-#include "backend/firewall_backend.h"
+#include "backend/firewall/firewall_backend.h"
 #include "tools/cplog.h"
 
 class FirewallTest : public ::testing::Test {

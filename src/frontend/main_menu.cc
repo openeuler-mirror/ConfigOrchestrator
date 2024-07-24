@@ -1,6 +1,6 @@
 #include "frontend/main_menu.h"
-#include "frontend/firewall_config.h"
-#include "frontend/package_config.h"
+#include "frontend/firewall/firewall_config.h"
+#include "frontend/package_manager/package_config.h"
 
 #include <cstddef>
 #include <iostream>
