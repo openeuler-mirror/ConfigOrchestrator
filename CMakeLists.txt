@@ -45,7 +45,7 @@ else()
 endif()
 
 set(MAIN_SOURCES
-    src/controlpane.cc
+    ${CMAKE_SOURCE_DIR}/src/controlpane.cc
 )
 
 set(FRONT_SOURCES
@@ -61,7 +61,7 @@ set(BACK_SOURCES
     ${CMAKE_SOURCE_DIR}/src/backend/config_backend_base.cc
 
     ${CMAKE_SOURCE_DIR}/src/backend/firewall/firewall_backend.cc
-    
+
     ${CMAKE_SOURCE_DIR}/src/backend/package_manager/package_manager_backend.cc
 )
 
