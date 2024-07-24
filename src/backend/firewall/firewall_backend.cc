@@ -18,9 +18,13 @@ auto FirewallBackend::getAllIPChain(int index) -> std::vector<std::string> {
        chain = iptc_next_chain(handle_)) {
     chains.emplace_back(chain);
 
-    for (const struct ipt_entry *entry = iptc_first_rule(chain, handle_);
-         entry != nullptr; entry = iptc_next_rule(entry, handle_)) {
-      yuiError() << "Rule: " << entry->ip.iniface << std::endl;
+    const struct ipt_entry *entry = iptc_first_rule(chain, handle_);
+    if (entry == nullptr) {
+      yuiMilestone() << "No rule in chain " << chain << std::endl;
+    }
+
+    for (; entry != nullptr; entry = iptc_next_rule(entry, handle_)) {
+      yuiMilestone() << "Rule: " << entry->ip.iniface << std::endl;
     }
   }
 

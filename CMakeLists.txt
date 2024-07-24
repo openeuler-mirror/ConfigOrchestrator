@@ -51,14 +51,18 @@ set(MAIN_SOURCES
 set(FRONT_SOURCES
     ${CMAKE_SOURCE_DIR}/src/frontend/ui_base.cc
     ${CMAKE_SOURCE_DIR}/src/frontend/main_menu.cc
-    ${CMAKE_SOURCE_DIR}/src/frontend/firewall_config.cc
-    ${CMAKE_SOURCE_DIR}/src/frontend/package_config.cc
+
+    ${CMAKE_SOURCE_DIR}/src/frontend/firewall/firewall_config.cc
+
+    ${CMAKE_SOURCE_DIR}/src/frontend/package_manager/package_config.cc
 )
 
 set(BACK_SOURCES
     ${CMAKE_SOURCE_DIR}/src/backend/config_backend_base.cc
-    ${CMAKE_SOURCE_DIR}/src/backend/firewall_backend.cc
-    ${CMAKE_SOURCE_DIR}/src/backend/package_manager_backend.cc
+
+    ${CMAKE_SOURCE_DIR}/src/backend/firewall/firewall_backend.cc
+    
+    ${CMAKE_SOURCE_DIR}/src/backend/package_manager/package_manager_backend.cc
 )
 
 set(TOOL_SOURCES
