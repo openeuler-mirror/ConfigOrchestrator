@@ -1,4 +1,4 @@
-#include "controlpane.h"
+#include "controlpanel.h"
 #include "backend/config_manager.h"
 #include "frontend/main_menu.h"
 #include "frontend/ui_base.h"

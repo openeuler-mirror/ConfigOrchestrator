@@ -45,7 +45,7 @@ else()
 endif()
 
 set(MAIN_SOURCES
-    ${CMAKE_SOURCE_DIR}/src/controlpane.cc
+    ${CMAKE_SOURCE_DIR}/src/controlpanel.cc
 )
 
 set(FRONT_SOURCES
@@ -100,7 +100,7 @@ find_library(YUI_LIB yui REQUIRED)
 find_path(YUI_INCLUDE_DIR yui REQUIRED)
 
 find_library(IPTC_LIB ip4tc ip6tc REQUIRED)
-find_path(IPTC_INCLUDE_DIR libipt/libiptc.h REQUIRED)
+find_path(IPTC_INCLUDE_DIR libiptc/libiptc.h REQUIRED)
 include_directories(${IPTC_INCLUDE_DIR})
 
 set(ALL_LIBS ${YUI_LIB} ${IPTC_LIB})

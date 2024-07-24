@@ -7,7 +7,7 @@
 #include "YLayoutBox.h"
 #include "YUI.h"
 #include "YWidgetFactory.h"
-#include "controlpane.h"
+#include "controlpanel.h"
 
 #include <cstdint>
 #include <functional>

@@ -1,6 +1,6 @@
 // 7月 19 2024
-#ifndef CONTROLPANE_H
-#define CONTROLPANE_H
+#ifndef CONTROLPANEL_H
+#define CONTROLPANEL_H
 
 #include "YDialog.h"
 #include "YEvent.h"
