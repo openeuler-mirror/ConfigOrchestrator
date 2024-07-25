@@ -20,14 +20,14 @@ auto FirewallConfig::userHandleEvent()
     return HandleResult{};
   };
 }
-auto FirewallConfig::GetComponentDescription() const -> std::string {
+auto FirewallConfig::getComponentDescription() const -> std::string {
   static std::string componentDescription =
       R"(Configure network firewall settings)";
 
   return componentDescription;
 };
 
-auto FirewallConfig::GetComponentName() const -> std::string {
+auto FirewallConfig::getComponentName() const -> std::string {
   static std::string componentName = "Network Firewall Configuration";
   return componentName;
 }

@@ -87,7 +87,7 @@ auto UIBase::handleHelp() const {
   YLayoutBox *vbox = fac->createVBox(dialog);
   YAlignment *minSize =
       fac->createMinSize(vbox, kPopDialogMinWidth, kPopDialogMinHeight);
-  YLabel *label = fac->createOutputField(minSize, GetComponentDescription());
+  YLabel *label = fac->createOutputField(minSize, getComponentDescription());
   label->setAutoWrap();
 
   fac->createPushButton(vbox, "OK");
@@ -104,7 +104,7 @@ auto UIBase::handleExit() const -> bool {
   YLayoutBox *vbox = fac->createVBox(dialog);
   YAlignment *minSize =
       fac->createMinSize(vbox, kPopDialogMinWidth, kPopDialogMinHeight);
-  YLabel *label = fac->createOutputField(minSize, GetComponentDescription());
+  YLabel *label = fac->createOutputField(minSize, getComponentDescription());
   label->setAutoWrap();
 
   auto *exit_button = fac->createPushButton(vbox, "Exit");
@@ -122,7 +122,7 @@ auto UIBase::handleExit() const -> bool {
 auto UIBase::handleButtons(YEvent *event) -> HandleResult {
   if (event->widget() == close_button_ ||
       event->eventType() == YEvent::CancelEvent) {
-    auto manager = GetManager();
+    auto manager = getManager();
 
     auto real_exit = true;
     if (manager && manager->hasUnsavedConfig()) {
@@ -153,7 +153,7 @@ auto UIBase::handleButtons(YEvent *event) -> HandleResult {
   if (event->widget() == apply_button_) {
     YUIUnImpl("Apply Button");
 
-    auto manager = GetManager();
+    auto manager = getManager();
     if (!manager) {
       yuiError() << "Manager is not available when searching" << std::endl;
       return HandleResult::EXIT;
@@ -189,17 +189,17 @@ auto UIBase::handleEvent() -> std::function<void()> {
   };
 }
 
-[[nodiscard]] auto UIBase::GetManager() const
+[[nodiscard]] auto UIBase::getManager() const
     -> std::shared_ptr<ConfigManager> {
-  auto parent = GetParent();
-  auto backend = GetBackend();
+  auto parent = getParent();
+  auto backend = getBackend();
 
   while (auto parent_ptr = parent.lock()) {
     if (parent_ptr->isMainMenu()) {
-      backend = parent_ptr->GetBackend();
+      backend = parent_ptr->getBackend();
       break;
     }
-    parent = parent_ptr->GetParent();
+    parent = parent_ptr->getParent();
   }
 
   assert(!backend.expired());
@@ -209,21 +209,21 @@ auto UIBase::handleEvent() -> std::function<void()> {
   return manager;
 }
 
-[[nodiscard]] auto UIBase::GetChildren() const
+[[nodiscard]] auto UIBase::getChildren() const
     -> std::vector<std::shared_ptr<UIBase>> {
   return children_;
 }
 
-[[nodiscard]] auto UIBase::GetParent() const -> std::weak_ptr<UIBase> {
+[[nodiscard]] auto UIBase::getParent() const -> std::weak_ptr<UIBase> {
   return parent_;
 }
 
-[[nodiscard]] auto UIBase::GetBackend() const
+[[nodiscard]] auto UIBase::getBackend() const
     -> std::weak_ptr<ConfigBackendBase> {
   return backend_;
 }
 
-[[nodiscard]] auto UIBase::GetFactory() const -> YWidgetFactory * {
+[[nodiscard]] auto UIBase::getFactory() const -> YWidgetFactory * {
   return factory_;
 }
 

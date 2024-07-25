@@ -12,9 +12,9 @@ public:
 
   ~FirewallConfig() override = default;
 
-  [[nodiscard]] auto GetComponentDescription() const -> std::string override;
+  [[nodiscard]] auto getComponentDescription() const -> std::string override;
 
-  [[nodiscard]] auto GetComponentName() const -> std::string override;
+  [[nodiscard]] auto getComponentName() const -> std::string override;
 
   auto init() -> bool override;
 

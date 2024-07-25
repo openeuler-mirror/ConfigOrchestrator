@@ -64,20 +64,20 @@ public:
 
   auto setBackend(const std::shared_ptr<ConfigBackendBase> &backend) -> void;
 
-  [[nodiscard]] auto GetManager() const -> std::shared_ptr<ConfigManager>;
+  [[nodiscard]] auto getManager() const -> std::shared_ptr<ConfigManager>;
 
-  [[nodiscard]] auto GetParent() const -> std::weak_ptr<UIBase>;
+  [[nodiscard]] auto getParent() const -> std::weak_ptr<UIBase>;
 
-  [[nodiscard]] auto GetBackend() const -> std::weak_ptr<ConfigBackendBase>;
+  [[nodiscard]] auto getBackend() const -> std::weak_ptr<ConfigBackendBase>;
 
-  [[nodiscard]] auto GetChildren() const
+  [[nodiscard]] auto getChildren() const
       -> std::vector<std::shared_ptr<UIBase>>;
 
-  [[nodiscard]] auto GetFactory() const -> YWidgetFactory *;
+  [[nodiscard]] auto getFactory() const -> YWidgetFactory *;
 
-  [[nodiscard]] virtual auto GetComponentDescription() const -> std::string = 0;
+  [[nodiscard]] virtual auto getComponentDescription() const -> std::string = 0;
 
-  [[nodiscard]] virtual auto GetComponentName() const -> std::string = 0;
+  [[nodiscard]] virtual auto getComponentName() const -> std::string = 0;
 
   virtual auto init() -> bool = 0;
 

@@ -18,9 +18,9 @@ auto MainMenu::userDisplay()
       [this](YDialog *main_dialog, YLayoutBox *main_layout_) -> DisplayResult {
         (void)main_dialog;
 
-        for (const auto &child : GetChildren()) {
-          auto *button = GetFactory()->createPushButton(
-              main_layout_, child->GetComponentName());
+        for (const auto &child : getChildren()) {
+          auto *button = getFactory()->createPushButton(
+              main_layout_, child->getComponentName());
 
           menu_buttons_.emplace_back(button);
         }
@@ -33,10 +33,10 @@ auto MainMenu::userHandleEvent() -> std::function<HandleResult(YEvent *event)> {
   return [this]([[maybe_unused]] YEvent *event) -> HandleResult {
     for (size_t i = 0; i < menu_buttons_.size(); i++) {
       if (event->widget() == menu_buttons_[i]) {
-        auto display = GetChildren()[i]->display();
+        auto display = getChildren()[i]->display();
         display();
 
-        auto handler = GetChildren()[i]->handleEvent();
+        auto handler = getChildren()[i]->handleEvent();
         handler();
 
         break;
@@ -46,7 +46,7 @@ auto MainMenu::userHandleEvent() -> std::function<HandleResult(YEvent *event)> {
   };
 }
 
-auto MainMenu::GetComponentDescription() const -> std::string {
+auto MainMenu::getComponentDescription() const -> std::string {
   static std::string componentDescription =
       R"(Main Menu of Control Panel of OpenEuler.
         Developed in 2024 OSPP.)";
@@ -54,7 +54,7 @@ auto MainMenu::GetComponentDescription() const -> std::string {
   return componentDescription;
 };
 
-auto MainMenu::GetComponentName() const -> std::string {
+auto MainMenu::getComponentName() const -> std::string {
   static std::string componentName = "Main Menu";
   return componentName;
 }

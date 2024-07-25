@@ -22,14 +22,14 @@ auto PackageManagerConfig::userHandleEvent()
     return HandleResult{};
   };
 }
-auto PackageManagerConfig::GetComponentDescription() const -> std::string {
+auto PackageManagerConfig::getComponentDescription() const -> std::string {
   static std::string componentDescription =
       R"(Configure package manager settings)";
 
   return componentDescription;
 };
 
-auto PackageManagerConfig::GetComponentName() const -> std::string {
+auto PackageManagerConfig::getComponentName() const -> std::string {
   static std::string componentName = "Package Manager (dnf) Configuration";
   return componentName;
 }
