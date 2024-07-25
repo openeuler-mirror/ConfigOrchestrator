@@ -1,4 +1,5 @@
 #include "frontend/firewall/firewall_config.h"
+#include "backend/firewall/firewall_backend.h"
 #include <memory>
 
 const std::string FirewallConfig::nonSuWarnText =
@@ -46,10 +47,17 @@ auto FirewallConfig::init() -> bool {
   }
 
   auto res = true;
-  {
-    auto backend = std::make_shared<FirewallBackend>(
-        getParent().lock()->getBackend().lock());
-    res &= backend->init();
+  auto backend = std::make_shared<FirewallBackend>(
+      getParent().lock()->getBackend().lock(), FirewallBackendType::OVERALL,
+      "Firewall Config");
+
+  res &= backend->init();
+
+  setBackend(backend);
+
+  auto tables = backend->getTableNames();
+  auto parent = shared_from_this();
+  for (const auto &table : tables) {
   }
 
   return res;

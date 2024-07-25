@@ -18,6 +18,8 @@ public:
 
   auto isConfigManager() -> bool { return parent_.expired(); }
 
+  auto getParent() -> std::weak_ptr<ConfigBackendBase> { return parent_; }
+
 private:
   std::weak_ptr<ConfigBackendBase> parent_;
 };

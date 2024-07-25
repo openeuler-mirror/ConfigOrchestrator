@@ -1,56 +1,54 @@
 #include "backend/firewall/firewall_backend.h"
-#include "backend/firewall/firewall_tab_chain.h"
 #include <memory>
+#include <vector>
 
-FirewallBackend::FirewallBackend(
-    const std::shared_ptr<ConfigBackendBase> &parent)
-    : ConfigBackendBase(parent) {}
-
-auto FirewallBackend::getAllIPChain(int index) -> std::vector<std::string> {
-  if (!isSuperUser()) {
-    yuiError() << "You must be root to run this command" << std::endl;
-    std::exit(-1);
-  }
+auto FirewallBackend::getChainNames() -> std::vector<std::string> {
+  assert(type_ == FirewallBackendType::TABLE && handle_ != nullptr);
 
   std::vector<std::string> chains;
-
-  auto table = getTableNames()[index];
-  handle_ = iptc_init(table.c_str());
-  if (handle_ == nullptr) {
-    yuiError() << "Error initializing: " << iptc_strerror(errno) << std::endl;
-  }
 
   for (const auto *chain = iptc_first_chain(handle_); chain != nullptr;
        chain = iptc_next_chain(handle_)) {
     chains.emplace_back(chain);
-
-    const struct ipt_entry *entry = iptc_first_rule(chain, handle_);
-    if (entry == nullptr) {
-      yuiMilestone() << "No rule in chain " << chain << std::endl;
-    }
-
-    for (; entry != nullptr; entry = iptc_next_rule(entry, handle_)) {
-      yuiMilestone() << "Rule: " << entry->ip.iniface << std::endl;
-    }
   }
-
-  iptc_free(handle_);
-
   return chains;
 }
 
-auto FirewallBackend::init() -> bool {
-  auto names = getTableNames();
+auto FirewallBackend::getRules() -> std::vector<const struct ipt_entry *> {
+  assert(type_ == FirewallBackendType::CHAIN && handle_ != nullptr);
 
-  auto parent = shared_from_this();
-  for (const auto &name : names) {
-    handle_ = iptc_init(name.c_str());
-    if (handle_ == nullptr) {
-      yuiError() << "Error initializing: " << iptc_strerror(errno) << std::endl;
-    }
+  std::vector<const struct ipt_entry *> rules;
 
-    tables_.emplace(name, std::make_shared<FirewallTabChain>(
-                              parent, IPTType::TABLE, name, handle_));
+  for (const struct ipt_entry *entry = iptc_first_rule(name_.c_str(), handle_);
+       entry != nullptr; entry = iptc_next_rule(entry, handle_)) {
+    rules.emplace_back(entry);
   }
+  return rules;
+}
+
+auto FirewallBackend::init() -> bool {
+  if (type_ == FirewallBackendType::OVERALL) {
+  } else if (type_ == FirewallBackendType::TABLE) {
+    assert(handle_ == nullptr);
+
+    handle_ = iptc_init(name_.c_str());
+    if (handle_ == nullptr) {
+      yuiError() << "Error initializing iptables's table: " << name_
+                 << " error: " << iptc_strerror(errno) << std::endl;
+      return false;
+    }
+  } else if (type_ == FirewallBackendType::CHAIN) {
+    assert(handle_ == nullptr);
+    auto parent =
+        std::dynamic_pointer_cast<FirewallBackend>(getParent().lock());
+
+    assert(parent != nullptr);
+    handle_ = parent->getHandler();
+
+    assert(handle_ != nullptr);
+  } else {
+    return false;
+  }
+
   return true;
 }
