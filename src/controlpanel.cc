@@ -12,8 +12,7 @@ auto main([[maybe_unused]] int argc, [[maybe_unused]] char **argv) -> int {
 
   YUI::app()->setApplicationTitle("Control Panel");
 
-  auto configManager = std::make_shared<ConfigManager>();
-  auto menu = std::make_shared<MainMenu>("Main Menu", configManager);
+  auto menu = std::make_shared<MainMenu>("Main Menu");
   menu->init();
 
   auto display = menu->display();

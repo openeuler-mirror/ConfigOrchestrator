@@ -10,7 +10,9 @@
 #include <cassert>
 #include <cstdlib>
 #include <exception>
+#include <memory>
 #include <string>
+#include <type_traits>
 
 const std::string UIBase::kSoftwareName = "Control Panel";
 const std::string UIBase::kBackButtonName = "&Back";
@@ -94,7 +96,8 @@ auto UIBase::handleHelp() const {
 }
 
 auto UIBase::handleExit() const -> bool {
-  const static std::string msg = "There are unsaved ?";
+  const static std::string msg =
+      "There are unsaved changes. Do you want to exit?";
   YWidgetFactory *fac = YUI::widgetFactory();
   YDialog *dialog = fac->createPopupDialog();
 
@@ -119,7 +122,7 @@ auto UIBase::handleExit() const -> bool {
 auto UIBase::handleButtons(YEvent *event) -> HandleResult {
   if (event->widget() == close_button_ ||
       event->eventType() == YEvent::CancelEvent) {
-    auto manager = manager_.lock();
+    auto manager = GetManager();
 
     auto real_exit = true;
     if (manager && manager->hasUnsavedConfig()) {
@@ -150,7 +153,7 @@ auto UIBase::handleButtons(YEvent *event) -> HandleResult {
   if (event->widget() == apply_button_) {
     YUIUnImpl("Apply Button");
 
-    auto manager = manager_.lock();
+    auto manager = GetManager();
     if (!manager) {
       yuiError() << "Manager is not available when searching" << std::endl;
       return HandleResult::EXIT;
@@ -186,8 +189,24 @@ auto UIBase::handleEvent() -> std::function<void()> {
   };
 }
 
-[[nodiscard]] auto UIBase::GetManager() const -> std::weak_ptr<ConfigManager> {
-  return manager_;
+[[nodiscard]] auto UIBase::GetManager() const
+    -> std::shared_ptr<ConfigManager> {
+  auto parent = GetParent();
+  auto backend = GetBackend();
+
+  while (auto parent_ptr = parent.lock()) {
+    if (parent_ptr->isMainMenu()) {
+      backend = parent_ptr->GetBackend();
+      break;
+    }
+    parent = parent_ptr->GetParent();
+  }
+
+  assert(!backend.expired());
+  auto manager = std::dynamic_pointer_cast<ConfigManager>(backend.lock());
+
+  assert(manager != nullptr);
+  return manager;
 }
 
 [[nodiscard]] auto UIBase::GetChildren() const
@@ -195,25 +214,31 @@ auto UIBase::handleEvent() -> std::function<void()> {
   return children_;
 }
 
+[[nodiscard]] auto UIBase::GetParent() const -> std::weak_ptr<UIBase> {
+  return parent_;
+}
+
+[[nodiscard]] auto UIBase::GetBackend() const
+    -> std::weak_ptr<ConfigBackendBase> {
+  return backend_;
+}
+
 [[nodiscard]] auto UIBase::GetFactory() const -> YWidgetFactory * {
   return factory_;
 }
 
-auto UIBase::init() -> bool {
-  auto manager = manager_.lock();
-  if (!manager) {
-    yuiError() << "Manager is not available" << std::endl;
-    return false;
-  }
+auto UIBase::isMainMenu() -> bool { return parent_.expired(); }
 
-  auto parent = shared_from_this();
-  auto children = GetChildrenInitializer();
-  for (auto &child : children) {
-    auto child_instance = child(manager, parent);
-    children_.emplace_back(child_instance);
+auto UIBase::reset() -> void {
+  children_.clear();
+  backend_.reset();
+}
 
-    child_instance->init();
-  }
+auto UIBase::appendChild(const std::shared_ptr<UIBase> &child) -> void {
+  children_.push_back(child);
+}
 
-  return true;
+auto UIBase::setBackend(const std::shared_ptr<ConfigBackendBase> &backend)
+    -> void {
+  backend_ = backend;
 }

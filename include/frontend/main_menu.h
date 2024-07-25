@@ -6,14 +6,13 @@
 #include "frontend/ui_base.h"
 
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
 class MainMenu : public UIBase {
 public:
-  MainMenu(const std::string &name,
-           const std::shared_ptr<ConfigManager> &manager)
-      : UIBase(name, manager, nullptr) {}
+  MainMenu(const std::string &name) : UIBase(name, nullptr) {}
 
   ~MainMenu() override = default;
 
@@ -21,10 +20,7 @@ public:
 
   [[nodiscard]] auto GetComponentName() const -> std::string override;
 
-  [[nodiscard]] auto GetChildrenInitializer() const
-      -> std::vector<std::function<std::shared_ptr<UIBase>(
-          const std::shared_ptr<ConfigManager> &manager,
-          const std::shared_ptr<UIBase> &parent)>> override;
+  auto init() -> bool override;
 
 private:
   auto userDisplay()
@@ -34,6 +30,9 @@ private:
   auto userHandleEvent() -> std::function<HandleResult(YEvent *event)> override;
 
   std::vector<YPushButton *> menu_buttons_;
+
+  static const std::string FirewallConfigName;
+  static const std::string PackageManagerName;
 };
 
 #endif

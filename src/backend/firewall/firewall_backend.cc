@@ -1,4 +1,10 @@
 #include "backend/firewall/firewall_backend.h"
+#include "backend/firewall/firewall_tab_chain.h"
+#include <memory>
+
+FirewallBackend::FirewallBackend(
+    const std::shared_ptr<ConfigBackendBase> &parent)
+    : ConfigBackendBase(parent) {}
 
 auto FirewallBackend::getAllIPChain(int index) -> std::vector<std::string> {
   if (!isSuperUser()) {
@@ -31,4 +37,20 @@ auto FirewallBackend::getAllIPChain(int index) -> std::vector<std::string> {
   iptc_free(handle_);
 
   return chains;
+}
+
+auto FirewallBackend::init() -> bool {
+  auto names = getTableNames();
+
+  auto parent = shared_from_this();
+  for (const auto &name : names) {
+    handle_ = iptc_init(name.c_str());
+    if (handle_ == nullptr) {
+      yuiError() << "Error initializing: " << iptc_strerror(errno) << std::endl;
+    }
+
+    tables_.emplace(name, std::make_shared<FirewallTabChain>(
+                              parent, IPTType::TABLE, name, handle_));
+  }
+  return true;
 }

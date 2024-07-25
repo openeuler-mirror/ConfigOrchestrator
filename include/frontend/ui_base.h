@@ -38,11 +38,10 @@ using config_id_t = uint32_t;
 
 class UIBase : public std::enable_shared_from_this<UIBase> {
 public:
-  UIBase(std::string name, const std::shared_ptr<ConfigManager> &manager,
-         const std::shared_ptr<UIBase> &parent,
+  UIBase(std::string name, const std::shared_ptr<UIBase> &parent,
          std::shared_ptr<ConfigBackendBase> backend = nullptr)
-      : name_(std::move(name)), manager_(manager), parent_(parent),
-        backend_(std::move(backend)), main_dialog_(nullptr) {
+      : name_(std::move(name)), parent_(parent), backend_(std::move(backend)),
+        main_dialog_(nullptr) {
     factory_ = YUI::widgetFactory();
   }
 
@@ -50,15 +49,26 @@ public:
     if (main_dialog_ != nullptr) {
       main_dialog_->destroy();
     }
+    backend_.reset();
   }
 
   auto display() -> std::function<void()>;
 
   auto handleEvent() -> std::function<void()>;
 
-  auto init() -> bool;
+  auto isMainMenu() -> bool;
 
-  [[nodiscard]] auto GetManager() const -> std::weak_ptr<ConfigManager>;
+  auto reset() -> void;
+
+  auto appendChild(const std::shared_ptr<UIBase> &child) -> void;
+
+  auto setBackend(const std::shared_ptr<ConfigBackendBase> &backend) -> void;
+
+  [[nodiscard]] auto GetManager() const -> std::shared_ptr<ConfigManager>;
+
+  [[nodiscard]] auto GetParent() const -> std::weak_ptr<UIBase>;
+
+  [[nodiscard]] auto GetBackend() const -> std::weak_ptr<ConfigBackendBase>;
 
   [[nodiscard]] auto GetChildren() const
       -> std::vector<std::shared_ptr<UIBase>>;
@@ -69,20 +79,13 @@ public:
 
   [[nodiscard]] virtual auto GetComponentName() const -> std::string = 0;
 
-  [[nodiscard]] virtual auto GetChildrenInitializer() const
-      -> std::vector<std::function<
-          std::shared_ptr<UIBase>(const std::shared_ptr<ConfigManager> &manager,
-                                  const std::shared_ptr<UIBase> &parent)>> = 0;
-
-  auto isMainMenu() -> bool { return parent_.expired(); }
+  virtual auto init() -> bool = 0;
 
 private:
   std::string name_;
-  std::weak_ptr<ConfigManager> manager_;
   std::weak_ptr<UIBase> parent_;
-  std::vector<std::shared_ptr<UIBase>> children_;
-
   std::shared_ptr<ConfigBackendBase> backend_;
+  std::vector<std::shared_ptr<UIBase>> children_;
 
   YWidgetFactory *factory_;
   YDialog *main_dialog_;

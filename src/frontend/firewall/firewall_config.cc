@@ -32,9 +32,4 @@ auto FirewallConfig::GetComponentName() const -> std::string {
   return componentName;
 }
 
-auto FirewallConfig::GetChildrenInitializer() const
-    -> std::vector<std::function<
-        std::shared_ptr<UIBase>(const std::shared_ptr<ConfigManager> &manager,
-                                const std::shared_ptr<UIBase> &parent)>> {
-  return {};
-}
+auto FirewallConfig::init() -> bool { return true; }

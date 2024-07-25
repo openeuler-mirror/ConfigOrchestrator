@@ -1,2 +1,2 @@
 add_gtest(firewall_backend_test firewall/firewall_backend_test.cc)
-add_gtest(package_manager_test package_manager_test.cc)
+add_gtest(package_manager_test package_manager/package_manager_test.cc)

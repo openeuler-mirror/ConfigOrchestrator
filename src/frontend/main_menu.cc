@@ -1,10 +1,15 @@
 #include "frontend/main_menu.h"
 #include "frontend/firewall/firewall_config.h"
 #include "frontend/package_manager/package_config.h"
+#include "frontend/ui_base.h"
 
 #include <cstddef>
 #include <iostream>
+#include <memory>
 #include <string>
+
+const std::string MainMenu::FirewallConfigName = "Firewall Config";
+const std::string MainMenu::PackageManagerName = "Package Manager Config";
 
 auto MainMenu::userDisplay()
     -> std::function<DisplayResult(YDialog *main_dialog,
@@ -54,17 +59,27 @@ auto MainMenu::GetComponentName() const -> std::string {
   return componentName;
 }
 
-auto MainMenu::GetChildrenInitializer() const -> std::vector<std::function<
-    std::shared_ptr<UIBase>(const std::shared_ptr<ConfigManager> &manager,
-                            const std::shared_ptr<UIBase> &parent)>> {
-  return {
-      [name = "Network Config"](const std::shared_ptr<ConfigManager> &manager,
-                                const std::shared_ptr<UIBase> &parent) {
-        return std::make_shared<FirewallConfig>(name, manager, parent);
-      },
-      [name = "Package Manager Config"](
-          const std::shared_ptr<ConfigManager> &manager,
-          const std::shared_ptr<UIBase> &parent) {
-        return std::make_shared<PackageManagerConfig>(name, manager, parent);
-      }};
+auto MainMenu::init() -> bool {
+  {
+    auto parent = shared_from_this();
+    {
+      auto child = std::make_shared<FirewallConfig>(FirewallConfigName, parent);
+      appendChild(child);
+    }
+
+    {
+      auto child =
+          std::make_shared<PackageManagerConfig>(PackageManagerName, parent);
+      appendChild(child);
+    }
+  }
+
+  {
+    auto backend = std::make_shared<ConfigManager>(nullptr);
+    backend->init();
+
+    setBackend(backend);
+  }
+
+  return true;
 }

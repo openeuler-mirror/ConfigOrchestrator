@@ -5,7 +5,9 @@
 
 class PackageManagerTest : public ::testing::Test {
 protected:
-  void SetUp() override { pkb = std::make_shared<PackageManagerBackend>(); }
+  void SetUp() override {
+    pkb = std::make_shared<PackageManagerBackend>(nullptr);
+  }
 
   void TearDown() override {}
 

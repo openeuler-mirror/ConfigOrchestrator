@@ -2,7 +2,10 @@
 
 class PackageManagerBackend : public ConfigBackendBase {
 public:
-  PackageManagerBackend() = default;
+  PackageManagerBackend(const std::shared_ptr<ConfigBackendBase> &parent)
+      : ConfigBackendBase(parent){};
+
+  auto init() -> bool override;
 
 private:
 };

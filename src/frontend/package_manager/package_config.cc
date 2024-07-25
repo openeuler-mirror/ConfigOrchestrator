@@ -34,9 +34,4 @@ auto PackageManagerConfig::GetComponentName() const -> std::string {
   return componentName;
 }
 
-auto PackageManagerConfig::GetChildrenInitializer() const
-    -> std::vector<std::function<
-        std::shared_ptr<UIBase>(const std::shared_ptr<ConfigManager> &manager,
-                                const std::shared_ptr<UIBase> &parent)>> {
-  return {};
-}
+auto PackageManagerConfig::init() -> bool { return true; }
