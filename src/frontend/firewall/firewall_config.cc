@@ -1,4 +1,8 @@
 #include "frontend/firewall/firewall_config.h"
+#include <memory>
+
+const std::string FirewallConfig::nonSuWarnText =
+    "Please run the control panel as root to configure firewall.";
 
 auto FirewallConfig::userDisplay()
     -> std::function<DisplayResult(YDialog *main_dialog,
@@ -32,4 +36,21 @@ auto FirewallConfig::getComponentName() const -> std::string {
   return componentName;
 }
 
-auto FirewallConfig::init() -> bool { return true; }
+auto FirewallConfig::init() -> bool {
+  if (!isSuperUser()) {
+    yuiError() << "Non-root user try to open firewall configuration."
+               << std::endl;
+
+    warnDialog(nonSuWarnText);
+    return false;
+  }
+
+  auto res = true;
+  {
+    auto backend = std::make_shared<FirewallBackend>(
+        getParent().lock()->getBackend().lock());
+    res &= backend->init();
+  }
+
+  return res;
+}

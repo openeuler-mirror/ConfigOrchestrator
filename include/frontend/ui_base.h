@@ -52,6 +52,8 @@ public:
     backend_.reset();
   }
 
+  auto warnDialog(const std::string &warning) -> void;
+
   auto display() -> std::function<void()>;
 
   auto handleEvent() -> std::function<void()>;
@@ -116,6 +118,7 @@ private:
   static const std::string kCloseButtonName;
   static const std::string kApplyButtonName;
   static const std::string kHelpButtonName;
+  static const std::string kWarnDialogTitle;
 
   virtual auto userDisplay()
       -> std::function<DisplayResult(YDialog *main_dialog,

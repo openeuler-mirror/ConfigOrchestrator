@@ -24,6 +24,8 @@ private:
                                      YLayoutBox *main_layout_)> override;
 
   auto userHandleEvent() -> std::function<HandleResult(YEvent *event)> override;
+
+  const static std::string nonSuWarnText;
 };
 
 #endif

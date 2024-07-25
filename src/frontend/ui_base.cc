@@ -20,11 +20,16 @@ const std::string UIBase::kSearchButtonName = "&Search";
 const std::string UIBase::kCloseButtonName = "&Close";
 const std::string UIBase::kApplyButtonName = "&Apply";
 const std::string UIBase::kHelpButtonName = "&Help";
+const std::string UIBase::kWarnDialogTitle = "Warning";
 
 auto UIBase::display() -> std::function<void()> {
   return [this]() {
-    auto user_displayer = userDisplay();
+    if (!init()) {
+      yuiError() << "Failed to initialize " << name_ << std::endl;
+      return; /* Init failed */
+    }
 
+    auto user_displayer = userDisplay();
     main_dialog_ = factory_->createDialog(YDialogType::YMainDialog);
     main_layout_ = factory_->createVBox(main_dialog_);
     main_layout_->setStretchable(YUIDimension::YD_HORIZ, true);
@@ -165,6 +170,11 @@ auto UIBase::handleButtons(YEvent *event) -> HandleResult {
 
 auto UIBase::handleEvent() -> std::function<void()> {
   return [this]() {
+    if (main_dialog_ == nullptr) {
+      yuiError() << "main_dialog is nullptr when handling event" << std::endl;
+      return;
+    }
+
     auto user_handler = userHandleEvent();
     while (true) {
       auto *event = main_dialog_->waitForEvent();
@@ -241,4 +251,22 @@ auto UIBase::appendChild(const std::shared_ptr<UIBase> &child) -> void {
 auto UIBase::setBackend(const std::shared_ptr<ConfigBackendBase> &backend)
     -> void {
   backend_ = backend;
+}
+
+auto UIBase::warnDialog(const std::string &warning) -> void {
+  YDialog *dialog = factory_->createPopupDialog();
+
+  YLayoutBox *vbox = factory_->createVBox(dialog);
+  factory_->createLabel(vbox, kWarnDialogTitle);
+  factory_->createVSpacing(vbox, kVSpaceSize);
+
+  YAlignment *minSize =
+      factory_->createMinSize(vbox, kPopDialogMinWidth, kPopDialogMinHeight);
+  YLabel *label = factory_->createOutputField(minSize, warning);
+  label->setAutoWrap();
+
+  factory_->createPushButton(vbox, "OK");
+  dialog->waitForEvent();
+
+  dialog->destroy();
 }

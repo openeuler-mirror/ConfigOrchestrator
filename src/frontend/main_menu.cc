@@ -60,6 +60,15 @@ auto MainMenu::getComponentName() const -> std::string {
 }
 
 auto MainMenu::init() -> bool {
+  auto result = true;
+
+  {
+    auto backend = std::make_shared<ConfigManager>(nullptr);
+    result = result && backend->init();
+
+    setBackend(backend);
+  }
+
   {
     auto parent = shared_from_this();
     {
@@ -74,12 +83,5 @@ auto MainMenu::init() -> bool {
     }
   }
 
-  {
-    auto backend = std::make_shared<ConfigManager>(nullptr);
-    backend->init();
-
-    setBackend(backend);
-  }
-
-  return true;
+  return result;
 }
