@@ -66,6 +66,8 @@ public:
 
   auto setBackend(const std::shared_ptr<ConfigBackendBase> &backend) -> void;
 
+  auto getName() const -> std::string;
+
   [[nodiscard]] auto getManager() const -> std::shared_ptr<ConfigManager>;
 
   [[nodiscard]] auto getParent() const -> std::weak_ptr<UIBase>;

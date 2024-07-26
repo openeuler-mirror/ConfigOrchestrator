@@ -14,14 +14,15 @@
 #include <utility>
 #include <vector>
 
-enum class FirewallBackendType { OVERALL, TABLE, CHAIN };
+enum class FirewallBackendType { OVERALL, TABLE, CHAIN, RULE };
 class FirewallTabChain;
 
 class FirewallBackend : public ConfigBackendBase {
 public:
   FirewallBackend(const std::shared_ptr<ConfigBackendBase> &parent,
                   FirewallBackendType type, std::string name)
-      : ConfigBackendBase(parent), type_(type), name_(std::move(name)){};
+      : ConfigBackendBase(parent), type_(type), name_(std::move(name)),
+        handle_(nullptr){};
 
   ~FirewallBackend() override {
     if (type_ == FirewallBackendType::TABLE && handle_ != nullptr) {

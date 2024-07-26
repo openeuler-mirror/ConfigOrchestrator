@@ -270,3 +270,5 @@ auto UIBase::warnDialog(const std::string &warning) -> void {
 
   dialog->destroy();
 }
+
+auto UIBase::getName() const -> std::string { return name_; }

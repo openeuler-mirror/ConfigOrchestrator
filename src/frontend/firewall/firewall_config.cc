@@ -10,10 +10,14 @@ auto FirewallConfig::userDisplay()
                                    YLayoutBox *main_layout_)> {
   return
       [this](YDialog *main_dialog, YLayoutBox *main_layout_) -> DisplayResult {
-        std::cout << "displaying MainMenu with dialog: " << main_dialog
-                  << " and layout: " << main_layout_ << std::endl;
+        (void)main_dialog;
 
-        occupy(main_layout_);
+        for (const auto &child : getChildren()) {
+          auto *button = getFactory()->createPushButton(
+              main_layout_, child->getComponentName());
+
+          buttons_.emplace_back(button);
+        }
 
         return DisplayResult::SUCCESS;
       };
@@ -21,8 +25,20 @@ auto FirewallConfig::userDisplay()
 
 auto FirewallConfig::userHandleEvent()
     -> std::function<HandleResult(YEvent *event)> {
-  return []([[maybe_unused]] YEvent *event) -> HandleResult {
-    return HandleResult{};
+  return [this]([[maybe_unused]] YEvent *event) -> HandleResult {
+    auto children = getChildren();
+    for (auto i = 0; i < buttons_.size(); i++) {
+      if (event->widget() == buttons_[i]) {
+        auto display = children[i]->display();
+        display();
+
+        auto handler = children[i]->handleEvent();
+        handler();
+
+        break;
+      }
+    }
+    return HandleResult::SUCCESS;
   };
 }
 auto FirewallConfig::getComponentDescription() const -> std::string {
@@ -34,7 +50,12 @@ auto FirewallConfig::getComponentDescription() const -> std::string {
 
 auto FirewallConfig::getComponentName() const -> std::string {
   static std::string componentName = "Network Firewall Configuration";
-  return componentName;
+
+  if (type_ == FirewallBackendType::OVERALL) {
+    return componentName;
+  }
+
+  return getName();
 }
 
 auto FirewallConfig::init() -> bool {
@@ -46,18 +67,49 @@ auto FirewallConfig::init() -> bool {
     return false;
   }
 
+  yuiMilestone() << "Init firewall configuration of type "
+                 << static_cast<int>(type_) << " name: " << getName()
+                 << std::endl;
+
+  this->reset();
+  buttons_.clear();
+
   auto res = true;
   auto backend = std::make_shared<FirewallBackend>(
-      getParent().lock()->getBackend().lock(), FirewallBackendType::OVERALL,
-      "Firewall Config");
+      getParent().lock()->getBackend().lock(), type_, getComponentName());
 
   res &= backend->init();
-
   setBackend(backend);
 
-  auto tables = backend->getTableNames();
+  if (!res) {
+    yuiError() << "Failed to init firewall backend." << std::endl;
+    return false;
+  }
+
   auto parent = shared_from_this();
-  for (const auto &table : tables) {
+  if (type_ == FirewallBackendType::OVERALL) {
+    auto tables = backend->getTableNames();
+    for (const auto &table : tables) {
+      auto child = std::make_shared<FirewallConfig>(table, parent,
+                                                    FirewallBackendType::TABLE);
+      appendChild(child);
+    }
+  } else if (type_ == FirewallBackendType::TABLE) {
+    auto chains = backend->getChainNames();
+    for (const auto &chain : chains) {
+      auto child = std::make_shared<FirewallConfig>(chain, parent,
+                                                    FirewallBackendType::CHAIN);
+      appendChild(child);
+    }
+  } else if (type_ == FirewallBackendType::CHAIN) {
+    auto rules = backend->getRules();
+    for (const auto &rule : rules) {
+      auto child = std::make_shared<FirewallConfig>(rule, parent,
+                                                    FirewallBackendType::RULE);
+      appendChild(child);
+    }
+  } else {
+    res = false;
   }
 
   return res;

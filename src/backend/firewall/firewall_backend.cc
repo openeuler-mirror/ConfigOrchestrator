@@ -37,16 +37,9 @@ auto FirewallBackend::init() -> bool {
                  << " error: " << iptc_strerror(errno) << std::endl;
       return false;
     }
-  } else if (type_ == FirewallBackendType::CHAIN) {
-    assert(handle_ == nullptr);
-    auto parent =
-        std::dynamic_pointer_cast<FirewallBackend>(getParent().lock());
-
-    assert(parent != nullptr);
-    handle_ = parent->getHandler();
-
-    assert(handle_ != nullptr);
   } else {
+    yuiError() << "Invalid firewall backend type: " << static_cast<int>(type_)
+               << std::endl;
     return false;
   }
 
