@@ -9,15 +9,13 @@ class PackageManagerConfig : public UIBase {
 public:
   PackageManagerConfig(const std::string &name,
                        const std::shared_ptr<UIBase> &parent)
-      : UIBase(name, parent, nullptr){};
+      : UIBase(name, parent){};
 
   ~PackageManagerConfig() override = default;
 
   [[nodiscard]] auto getComponentDescription() const -> std::string override;
 
   [[nodiscard]] auto getComponentName() const -> std::string override;
-
-  auto init() -> bool override;
 
 private:
   auto userDisplay()

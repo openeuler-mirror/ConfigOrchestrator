@@ -1,37 +1,47 @@
 #ifndef FIREWALL_CONFIG_H
 #define FIREWALL_CONFIG_H
 
-#include "YPushButton.h"
 #include "backend/firewall/firewall_backend.h"
+#include "backend/firewall/firewall_context.h"
 #include "frontend/ui_base.h"
+
+#include "YPushButton.h"
+#include <functional>
 #include <memory>
+#include <string>
 #include <vector>
+
+using std::function;
+using std::shared_ptr;
+using std::string;
+using std::unique_ptr;
+using std::vector;
 
 class FirewallConfig : public UIBase {
 public:
-  FirewallConfig(const std::string &name, const std::shared_ptr<UIBase> &parent,
-                 FirewallBackendType type = FirewallBackendType::OVERALL)
-      : UIBase(name, parent, nullptr), type_(type){};
+  FirewallConfig(const string &name, const shared_ptr<UIBase> &parent,
+                 shared_ptr<FirewallContext> context = nullptr);
 
   ~FirewallConfig() override = default;
 
-  [[nodiscard]] auto getComponentDescription() const -> std::string override;
+  [[nodiscard]] auto getComponentDescription() const -> string override;
 
-  [[nodiscard]] auto getComponentName() const -> std::string override;
-
-  auto init() -> bool override;
+  [[nodiscard]] auto getComponentName() const -> string override;
 
 private:
   auto userDisplay()
-      -> std::function<DisplayResult(YDialog *main_dialog,
-                                     YLayoutBox *main_layout_)> override;
+      -> function<DisplayResult(YDialog *main_dialog,
+                                YLayoutBox *main_layout_)> override;
 
-  auto userHandleEvent() -> std::function<HandleResult(YEvent *event)> override;
+  auto userHandleEvent() -> function<HandleResult(YEvent *event)> override;
 
-  FirewallBackendType type_;
-  std::vector<YPushButton *> buttons_;
+  shared_ptr<FirewallContext> firewall_context_;
+  shared_ptr<FirewallBackend> firewall_backend_;
 
-  const static std::string nonSuWarnText;
+  vector<string> subConfigs_;
+  vector<YPushButton *> buttons_;
+
+  const static string nonSuWarnText;
 };
 
 #endif

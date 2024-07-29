@@ -10,29 +10,37 @@
 #include <utility>
 #include <vector>
 
+using std::function;
+using std::shared_ptr;
+using std::string;
+using std::tuple;
+using std::vector;
+
 class MainMenu : public UIBase {
 public:
-  MainMenu(const std::string &name) : UIBase(name, nullptr) {}
+  using menu_render = function<void()>;
+
+  MainMenu(const string &name) : UIBase(name, nullptr) {}
 
   ~MainMenu() override = default;
 
-  [[nodiscard]] auto getComponentDescription() const -> std::string override;
+  [[nodiscard]] auto getComponentDescription() const -> string override;
 
-  [[nodiscard]] auto getComponentName() const -> std::string override;
-
-  auto init() -> bool override;
+  [[nodiscard]] auto getComponentName() const -> string override;
 
 private:
   auto userDisplay()
-      -> std::function<DisplayResult(YDialog *main_dialog,
-                                     YLayoutBox *main_layout_)> override;
+      -> function<DisplayResult(YDialog *main_dialog,
+                                YLayoutBox *main_layout_)> override;
 
-  auto userHandleEvent() -> std::function<HandleResult(YEvent *event)> override;
+  auto userHandleEvent() -> function<HandleResult(YEvent *event)> override;
 
-  std::vector<YPushButton *> menu_buttons_;
+  auto getMenuConfigs() -> vector<tuple<string, menu_render>> &;
 
-  static const std::string FirewallConfigName;
-  static const std::string PackageManagerName;
+  vector<YPushButton *> menu_buttons_;
+
+  static const string FirewallConfigName;
+  static const string PackageManagerName;
 };
 
 #endif

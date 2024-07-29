@@ -38,10 +38,8 @@ using config_id_t = uint32_t;
 
 class UIBase : public std::enable_shared_from_this<UIBase> {
 public:
-  UIBase(std::string name, const std::shared_ptr<UIBase> &parent,
-         std::shared_ptr<ConfigBackendBase> backend = nullptr)
-      : name_(std::move(name)), parent_(parent), backend_(std::move(backend)),
-        main_dialog_(nullptr) {
+  UIBase(std::string name, const std::shared_ptr<UIBase> &parent)
+      : name_(std::move(name)), parent_(parent), main_dialog_(nullptr) {
     factory_ = YUI::widgetFactory();
   }
 
@@ -49,33 +47,19 @@ public:
     if (main_dialog_ != nullptr) {
       main_dialog_->destroy();
     }
-    backend_.reset();
   }
-
-  auto warnDialog(const std::string &warning) -> void;
 
   auto display() -> std::function<void()>;
 
   auto handleEvent() -> std::function<void()>;
 
+  auto warnDialog(const std::string &warning) -> void;
+
   auto isMainMenu() -> bool;
-
-  auto reset() -> void;
-
-  auto appendChild(const std::shared_ptr<UIBase> &child) -> void;
-
-  auto setBackend(const std::shared_ptr<ConfigBackendBase> &backend) -> void;
 
   auto getName() const -> std::string;
 
-  [[nodiscard]] auto getManager() const -> std::shared_ptr<ConfigManager>;
-
   [[nodiscard]] auto getParent() const -> std::weak_ptr<UIBase>;
-
-  [[nodiscard]] auto getBackend() const -> std::weak_ptr<ConfigBackendBase>;
-
-  [[nodiscard]] auto getChildren() const
-      -> std::vector<std::shared_ptr<UIBase>>;
 
   [[nodiscard]] auto getFactory() const -> YWidgetFactory *;
 
@@ -83,13 +67,9 @@ public:
 
   [[nodiscard]] virtual auto getComponentName() const -> std::string = 0;
 
-  virtual auto init() -> bool = 0;
-
 private:
   std::string name_;
   std::weak_ptr<UIBase> parent_;
-  std::shared_ptr<ConfigBackendBase> backend_;
-  std::vector<std::shared_ptr<UIBase>> children_;
 
   YWidgetFactory *factory_;
   YDialog *main_dialog_;

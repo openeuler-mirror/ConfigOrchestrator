@@ -18,9 +18,10 @@ auto MainMenu::userDisplay()
       [this](YDialog *main_dialog, YLayoutBox *main_layout_) -> DisplayResult {
         (void)main_dialog;
 
-        for (const auto &child : getChildren()) {
-          auto *button = getFactory()->createPushButton(
-              main_layout_, child->getComponentName());
+        auto menus = getMenuConfigs();
+        for (const auto &child : menus) {
+          auto *button =
+              getFactory()->createPushButton(main_layout_, get<0>(child));
 
           menu_buttons_.emplace_back(button);
         }
@@ -33,16 +34,14 @@ auto MainMenu::userHandleEvent() -> std::function<HandleResult(YEvent *event)> {
   return [this]([[maybe_unused]] YEvent *event) -> HandleResult {
     for (size_t i = 0; i < menu_buttons_.size(); i++) {
       if (event->widget() == menu_buttons_[i]) {
-        auto display = getChildren()[i]->display();
+        auto display = get<1>(getMenuConfigs()[i]);
         display();
-
-        auto handler = getChildren()[i]->handleEvent();
-        handler();
 
         break;
       }
     }
-    return HandleResult{};
+
+    return HandleResult::SUCCESS;
   };
 }
 
@@ -59,29 +58,32 @@ auto MainMenu::getComponentName() const -> std::string {
   return componentName;
 }
 
-auto MainMenu::init() -> bool {
-  auto result = true;
+auto MainMenu::getMenuConfigs() -> vector<tuple<string, menu_render>> & {
+  static vector<tuple<string, menu_render>> r = {
+      {FirewallConfigName,
+       [this]() {
+         auto parent = shared_from_this();
+         auto child =
+             std::make_shared<FirewallConfig>(FirewallConfigName, parent);
 
-  {
-    auto backend = std::make_shared<ConfigManager>(nullptr);
-    result = result && backend->init();
+         auto display = child->display();
+         auto handler = child->handleEvent();
 
-    setBackend(backend);
-  }
+         display();
+         handler();
+       }},
 
-  {
-    auto parent = shared_from_this();
-    {
-      auto child = std::make_shared<FirewallConfig>(FirewallConfigName, parent);
-      appendChild(child);
-    }
+      {PackageManagerName, [this]() {
+         auto parent = shared_from_this();
+         auto child =
+             std::make_shared<PackageManagerConfig>(PackageManagerName, parent);
 
-    {
-      auto child =
-          std::make_shared<PackageManagerConfig>(PackageManagerName, parent);
-      appendChild(child);
-    }
-  }
+         auto display = child->display();
+         auto handler = child->handleEvent();
 
-  return result;
+         display();
+         handler();
+       }}};
+
+  return r;
 }

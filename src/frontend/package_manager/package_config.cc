@@ -33,5 +33,3 @@ auto PackageManagerConfig::getComponentName() const -> std::string {
   static std::string componentName = "Package Manager (dnf) Configuration";
   return componentName;
 }
-
-auto PackageManagerConfig::init() -> bool { return true; }

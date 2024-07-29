@@ -8,19 +8,57 @@
 #include <atomic>
 #include <functional>
 #include <memory>
+#include <string>
+#include <typeindex>
 #include <vector>
+
+using std::function;
+using std::nullopt;
+using std::optional;
+using std::shared_ptr;
+using std::string;
+using std::type_index;
+using std::unordered_map;
+using std::vector;
 
 class ConfigManager : public ConfigBackendBase {
 public:
-  ConfigManager(const std::shared_ptr<ConfigBackendBase> &parent)
-      : ConfigBackendBase(parent){};
+  using initializer = function<shared_ptr<ConfigBackendBase>(void)>;
+
+  static auto instance() -> ConfigManager & {
+    static ConfigManager instance;
+    return instance;
+  }
+
+  template <typename BackendType>
+  auto getBackend(const string &id = string()) -> shared_ptr<BackendType> {
+    type_index type_index(typeid(BackendType));
+    string key = type_index.name() + id;
+
+    if (backends.find(key) == backends.end()) {
+      auto initializer_func = getInitializers(type_index.name());
+
+      if (initializer_func.has_value()) {
+        backends.insert({key, initializer_func.value()()});
+      } else {
+        backends.insert({key, std::make_shared<BackendType>()});
+      }
+    }
+
+    return dynamic_pointer_cast<BackendType>(backends[key]);
+  }
 
   auto hasUnsavedConfig() -> bool { return !unsavedConfigs_.empty(); }
 
-  auto init() -> bool override;
-
 private:
-  std::vector<std::function<void(void)>> unsavedConfigs_;
+  vector<function<bool(void)>> unsavedConfigs_;
+
+  // backend manager
+  unordered_map<string, shared_ptr<ConfigBackendBase>> backends;
+
+  ConfigManager() = default;
+
+  static auto getInitializers(const string &type) -> optional<initializer>;
 };
 
 #endif // CONFIG_MANAGER_H_

@@ -6,10 +6,7 @@
 
 class FirewallTest : public ::testing::Test {
 protected:
-  void SetUp() override {
-    fwb = std::make_shared<FirewallBackend>(
-        nullptr, FirewallBackendType::OVERALL, "Test Overall");
-  }
+  void SetUp() override { fwb = std::make_shared<FirewallBackend>(); }
 
   void TearDown() override {}
 

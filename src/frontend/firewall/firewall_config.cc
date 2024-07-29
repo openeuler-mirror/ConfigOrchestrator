@@ -1,21 +1,38 @@
 #include "frontend/firewall/firewall_config.h"
-#include "backend/firewall/firewall_backend.h"
-#include <memory>
+#include "backend/config_manager.h"
+#include "frontend/ui_base.h"
 
-const std::string FirewallConfig::nonSuWarnText =
+#include <memory>
+#include <utility>
+
+const string FirewallConfig::nonSuWarnText =
     "Please run the control panel as root to configure firewall.";
 
+FirewallConfig::FirewallConfig(const string &name,
+                               const shared_ptr<UIBase> &parent,
+                               shared_ptr<FirewallContext> firewall_context)
+    : UIBase(name, parent), firewall_context_(std::move(firewall_context)) {
+  if (!isSuperUser()) {
+    yuiError() << "Non-root user try to open firewall configuration." << endl;
+    warnDialog(nonSuWarnText);
+  }
+
+  if (firewall_context_ == nullptr) {
+    firewall_context_ = std::make_shared<FirewallContext>();
+  }
+
+  firewall_backend_ = ConfigManager::instance().getBackend<FirewallBackend>();
+  subConfigs_ = firewall_backend_->getSubconfigs(firewall_context_);
+};
+
 auto FirewallConfig::userDisplay()
-    -> std::function<DisplayResult(YDialog *main_dialog,
-                                   YLayoutBox *main_layout_)> {
+    -> function<DisplayResult(YDialog *main_dialog, YLayoutBox *main_layout_)> {
   return
       [this](YDialog *main_dialog, YLayoutBox *main_layout_) -> DisplayResult {
         (void)main_dialog;
 
-        for (const auto &child : getChildren()) {
-          auto *button = getFactory()->createPushButton(
-              main_layout_, child->getComponentName());
-
+        for (const auto &child : subConfigs_) {
+          auto *button = getFactory()->createPushButton(main_layout_, child);
           buttons_.emplace_back(button);
         }
 
@@ -24,93 +41,37 @@ auto FirewallConfig::userDisplay()
 }
 
 auto FirewallConfig::userHandleEvent()
-    -> std::function<HandleResult(YEvent *event)> {
+    -> function<HandleResult(YEvent *event)> {
   return [this]([[maybe_unused]] YEvent *event) -> HandleResult {
-    auto children = getChildren();
     for (auto i = 0; i < buttons_.size(); i++) {
       if (event->widget() == buttons_[i]) {
-        auto display = children[i]->display();
+        auto context =
+            firewall_backend_->createContext(firewall_context_, subConfigs_[i]);
+
+        auto child = std::make_shared<FirewallConfig>(
+            subConfigs_[i], shared_from_this(), context);
+
+        auto display = child->display();
+        auto handler = child->handleEvent();
+
         display();
-
-        auto handler = children[i]->handleEvent();
         handler();
-
         break;
       }
     }
+
     return HandleResult::SUCCESS;
   };
 }
-auto FirewallConfig::getComponentDescription() const -> std::string {
-  static std::string componentDescription =
-      R"(Configure network firewall settings)";
+
+auto FirewallConfig::getComponentDescription() const -> string {
+  static string componentDescription = R"(Configure network firewall settings)";
 
   return componentDescription;
 };
 
-auto FirewallConfig::getComponentName() const -> std::string {
-  static std::string componentName = "Network Firewall Configuration";
-
-  if (type_ == FirewallBackendType::OVERALL) {
-    return componentName;
-  }
+auto FirewallConfig::getComponentName() const -> string {
+  static string componentName = "Network Firewall Configuration";
 
   return getName();
-}
-
-auto FirewallConfig::init() -> bool {
-  if (!isSuperUser()) {
-    yuiError() << "Non-root user try to open firewall configuration."
-               << std::endl;
-
-    warnDialog(nonSuWarnText);
-    return false;
-  }
-
-  yuiMilestone() << "Init firewall configuration of type "
-                 << static_cast<int>(type_) << " name: " << getName()
-                 << std::endl;
-
-  this->reset();
-  buttons_.clear();
-
-  auto res = true;
-  auto backend = std::make_shared<FirewallBackend>(
-      getParent().lock()->getBackend().lock(), type_, getComponentName());
-
-  res &= backend->init();
-  setBackend(backend);
-
-  if (!res) {
-    yuiError() << "Failed to init firewall backend." << std::endl;
-    return false;
-  }
-
-  auto parent = shared_from_this();
-  if (type_ == FirewallBackendType::OVERALL) {
-    auto tables = backend->getTableNames();
-    for (const auto &table : tables) {
-      auto child = std::make_shared<FirewallConfig>(table, parent,
-                                                    FirewallBackendType::TABLE);
-      appendChild(child);
-    }
-  } else if (type_ == FirewallBackendType::TABLE) {
-    auto chains = backend->getChainNames();
-    for (const auto &chain : chains) {
-      auto child = std::make_shared<FirewallConfig>(chain, parent,
-                                                    FirewallBackendType::CHAIN);
-      appendChild(child);
-    }
-  } else if (type_ == FirewallBackendType::CHAIN) {
-    auto rules = backend->getRules();
-    for (const auto &rule : rules) {
-      auto child = std::make_shared<FirewallConfig>(rule, parent,
-                                                    FirewallBackendType::RULE);
-      appendChild(child);
-    }
-  } else {
-    res = false;
-  }
-
-  return res;
 }

@@ -9,19 +9,11 @@
 class ConfigBackendBase
     : public std::enable_shared_from_this<ConfigBackendBase> {
 public:
-  ConfigBackendBase(const std::shared_ptr<ConfigBackendBase> &parent)
-      : parent_(parent){};
+  ConfigBackendBase() = default;
 
   virtual ~ConfigBackendBase() = default;
 
-  virtual auto init() -> bool = 0;
-
-  auto isConfigManager() -> bool { return parent_.expired(); }
-
-  auto getParent() -> std::weak_ptr<ConfigBackendBase> { return parent_; }
-
 private:
-  std::weak_ptr<ConfigBackendBase> parent_;
 };
 
 #endif

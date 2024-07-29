@@ -5,55 +5,62 @@
 #include "libiptc/libiptc.h"
 
 #include "backend/config_backend_base.h"
+#include "backend/firewall/firewall_context.h"
 #include "tools/cplog.h"
 #include "tools/sys.h"
 
 #include <memory>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-enum class FirewallBackendType { OVERALL, TABLE, CHAIN, RULE };
-class FirewallTabChain;
+using std::ostringstream;
+using std::shared_ptr;
+using std::string;
+using std::vector;
+
+using ctx_t = shared_ptr<FirewallContext>;
 
 class FirewallBackend : public ConfigBackendBase {
 public:
-  FirewallBackend(const std::shared_ptr<ConfigBackendBase> &parent,
-                  FirewallBackendType type, std::string name)
-      : ConfigBackendBase(parent), type_(type), name_(std::move(name)),
-        handle_(nullptr){};
+  FirewallBackend();
 
-  ~FirewallBackend() override {
-    if (type_ == FirewallBackendType::TABLE && handle_ != nullptr) {
-      iptc_free(handle_);
-    }
-  }
+  ~FirewallBackend() override;
 
-  static auto getTableNames() -> std::vector<std::string> {
-    static std::vector<std::string> tables = {"filter", "nat", "mangle", "raw",
-                                              "security"};
+  static auto getTableNames() -> vector<string> {
+    static vector<string> tables = {"filter", "nat", "mangle", "raw",
+                                    "security"};
 
     return tables;
   };
 
-  auto getChainNames() -> std::vector<std::string>;
+  auto getSubconfigs(const ctx_t &context) -> vector<string>;
 
-  auto getRules() -> std::vector<const struct ipt_entry *>;
-
-  auto getHandler() -> struct iptc_handle * {
-    assert((type_ == FirewallBackendType::TABLE) ||
-           (type_ == FirewallBackendType::CHAIN) && handle_ != nullptr);
-
-    return handle_;
-  }
-
-  auto init() -> bool override;
+  static auto createContext(const ctx_t &current, const string &name) -> ctx_t;
 
 private:
-  struct iptc_handle *handle_;
-  FirewallBackendType type_;
-  std::string name_;
+  std::unordered_map<string, struct iptc_handle *> handles_;
+
+  auto getChainNames(const ctx_t &context) -> vector<string>;
+
+  auto getRules(const ctx_t &context) -> vector<const struct ipt_entry *>;
+
+  /* tool func for iptable rules */
+  static auto serializeRule(const struct ipt_entry *rule) -> string;
+
+  static auto deserializeRule(const string &rule) -> struct ipt_entry *;
+
+  static auto ip2String(uint32_t ip) -> std::string;
+
+  static auto iface2String(const char *iface) -> std::string;
+
+  static auto proto2String(uint8_t proto) -> std::string;
+
+  static constexpr auto kICMPType = 1;
+  static constexpr auto kTCPType = 6;
+  static constexpr auto kUDPType = 17;
 };
 
 #endif
