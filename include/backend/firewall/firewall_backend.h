@@ -50,6 +50,8 @@ private:
 
   static auto deserializeRule(const string &rule) -> struct ipt_entry *;
 
+  static auto shortSerializeRule(const struct ipt_entry *rule) -> string;
+
   static auto ip2String(uint32_t ip) -> std::string;
 
   static auto iface2String(const char *iface) -> std::string;

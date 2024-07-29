@@ -40,6 +40,9 @@ auto FirewallBackend::getSubconfigs(const shared_ptr<FirewallContext> &context)
     break;
   case FirewallLevel::CHAIN:
     auto rules = getRules(context);
+    for (const auto &rule : rules) {
+      subconfigs.emplace_back(shortSerializeRule(rule));
+    }
     break;
   }
 
@@ -112,6 +115,19 @@ auto FirewallBackend::serializeRule(const struct ipt_entry *rule) -> string {
   ss << "Come From: " << rule->comefrom << "\n";
   ss << "Packet Count: " << rule->counters.pcnt << "\n";
   ss << "Byte Count: " << rule->counters.bcnt << "\n";
+
+  return ss.str();
+}
+
+auto FirewallBackend::shortSerializeRule(const struct ipt_entry *rule)
+    -> string {
+  ostringstream ss;
+
+  ss << "SRC: " << ip2String(rule->ip.src.s_addr) << "/"
+     << ip2String(rule->ip.smsk.s_addr)
+     << ", DST: " << ip2String(rule->ip.dst.s_addr) << "/"
+     << ip2String(rule->ip.dmsk.s_addr)
+     << " | PROTO: " << proto2String(rule->ip.proto);
 
   return ss.str();
 }
