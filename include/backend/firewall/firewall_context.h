@@ -6,6 +6,10 @@
 
 using std::shared_ptr;
 using std::string;
+
+class FirewallContext;
+using ctx_t = shared_ptr<FirewallContext>;
+
 enum class FirewallLevel { OVERALL, TABLE, CHAIN };
 
 class FirewallContext {

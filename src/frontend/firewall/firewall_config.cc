@@ -10,7 +10,7 @@ const string FirewallConfig::nonSuWarnText =
 
 FirewallConfig::FirewallConfig(const string &name,
                                const shared_ptr<UIBase> &parent,
-                               shared_ptr<FirewallContext> firewall_context)
+                               ctx_t firewall_context)
     : UIBase(name, parent), firewall_context_(std::move(firewall_context)) {
   if (!isSuperUser()) {
     yuiError() << "Non-root user try to open firewall configuration." << endl;

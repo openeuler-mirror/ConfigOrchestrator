@@ -21,8 +21,6 @@ using std::shared_ptr;
 using std::string;
 using std::vector;
 
-using ctx_t = shared_ptr<FirewallContext>;
-
 class FirewallBackend : public ConfigBackendBase {
 public:
   FirewallBackend();
