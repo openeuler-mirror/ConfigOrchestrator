@@ -51,11 +51,9 @@ auto FirewallConfig::userHandleEvent()
         auto child = std::make_shared<FirewallConfig>(
             subConfigs_[i], shared_from_this(), context);
 
-        auto display = child->display();
-        auto handler = child->handleEvent();
+        child->display();
+        child->handleEvent();
 
-        display();
-        handler();
         break;
       }
     }

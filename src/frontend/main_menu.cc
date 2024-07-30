@@ -64,11 +64,8 @@ auto MainMenu::getMenuConfigs() -> vector<tuple<string, menu_render>> & {
          auto parent = shared_from_this();
          auto child = make_shared<FirewallConfig>(FirewallConfigName, parent);
 
-         auto display = child->display();
-         auto handler = child->handleEvent();
-
-         display();
-         handler();
+         child->display();
+         child->handleEvent();
        }},
 
       {PackageManagerName, [this]() {
@@ -76,11 +73,8 @@ auto MainMenu::getMenuConfigs() -> vector<tuple<string, menu_render>> & {
          auto child =
              make_shared<PackageManagerConfig>(PackageManagerName, parent);
 
-         auto display = child->display();
-         auto handler = child->handleEvent();
-
-         display();
-         handler();
+         child->display();
+         child->handleEvent();
        }}};
 
   return r;

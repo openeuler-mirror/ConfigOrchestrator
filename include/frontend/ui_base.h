@@ -49,9 +49,9 @@ public:
     }
   }
 
-  auto display() -> function<void()>;
+  auto display() -> void;
 
-  auto handleEvent() -> function<void()>;
+  auto handleEvent() -> void;
 
   auto warnDialog(const string &warning) -> void;
 

@@ -22,62 +22,58 @@ const string UIBase::kApplyButtonName = "&Apply";
 const string UIBase::kHelpButtonName = "&Help";
 const string UIBase::kWarnDialogTitle = "Warning";
 
-auto UIBase::display() -> function<void()> {
-  return [this]() {
-    auto user_displayer = userDisplay();
-    main_dialog_ = factory_->createDialog(YDialogType::YMainDialog);
-    main_layout_ = factory_->createVBox(main_dialog_);
-    main_layout_->setStretchable(YUIDimension::YD_HORIZ, true);
-    main_layout_->setStretchable(YUIDimension::YD_VERT, true);
+auto UIBase::display() -> void {
+  auto user_displayer = userDisplay();
+  main_dialog_ = factory_->createDialog(YDialogType::YMainDialog);
+  main_layout_ = factory_->createVBox(main_dialog_);
+  main_layout_->setStretchable(YUIDimension::YD_HORIZ, true);
+  main_layout_->setStretchable(YUIDimension::YD_VERT, true);
 
-    {
-      YAlignment *mbox = factory_->createMarginBox(main_layout_, kHboxHorMargin,
-                                                   kHboxVertMargin);
-      YAlignment *min_size =
-          factory_->createMinSize(mbox, kHboxHorMinSize, kHboxVertMinSize);
+  {
+    YAlignment *mbox = factory_->createMarginBox(main_layout_, kHboxHorMargin,
+                                                 kHboxVertMargin);
+    YAlignment *min_size =
+        factory_->createMinSize(mbox, kHboxHorMinSize, kHboxVertMinSize);
 
-      upper_layout_ = factory_->createHBox(min_size);
-      factory_->createLabel(upper_layout_, name_);
-    }
+    upper_layout_ = factory_->createHBox(min_size);
+    factory_->createLabel(upper_layout_, name_);
+  }
 
-    factory_->createVSpacing(main_layout_, kVSpaceSize);
+  factory_->createVSpacing(main_layout_, kVSpaceSize);
 
-    {
-      YAlignment *mbox = factory_->createMarginBox(main_layout_, kHboxHorMargin,
-                                                   kHboxVertMargin);
-      YAlignment *min_size =
-          factory_->createMinSize(mbox, kHboxHorMinSize, kHboxVertMinSize);
+  {
+    YAlignment *mbox = factory_->createMarginBox(main_layout_, kHboxHorMargin,
+                                                 kHboxVertMargin);
+    YAlignment *min_size =
+        factory_->createMinSize(mbox, kHboxHorMinSize, kHboxVertMinSize);
 
-      control_layout_ = factory_->createHBox(min_size);
+    control_layout_ = factory_->createHBox(min_size);
 
-      back_button_ =
-          factory_->createPushButton(control_layout_, kBackButtonName);
-      search_button_ =
-          factory_->createPushButton(control_layout_, kSearchButtonName);
-      close_button_ =
-          factory_->createPushButton(control_layout_, kCloseButtonName);
-      apply_button_ =
-          factory_->createPushButton(control_layout_, kApplyButtonName);
-      help_button_ =
-          factory_->createPushButton(control_layout_, kHelpButtonName);
+    back_button_ = factory_->createPushButton(control_layout_, kBackButtonName);
+    search_button_ =
+        factory_->createPushButton(control_layout_, kSearchButtonName);
+    close_button_ =
+        factory_->createPushButton(control_layout_, kCloseButtonName);
+    apply_button_ =
+        factory_->createPushButton(control_layout_, kApplyButtonName);
+    help_button_ = factory_->createPushButton(control_layout_, kHelpButtonName);
 
-      close_button_->setRole(YButtonRole::YCancelButton);
-      apply_button_->setRole(YButtonRole::YApplyButton);
-      help_button_->setRole(YButtonRole::YHelpButton);
-    }
+    close_button_->setRole(YButtonRole::YCancelButton);
+    apply_button_->setRole(YButtonRole::YApplyButton);
+    help_button_->setRole(YButtonRole::YHelpButton);
+  }
 
-    factory_->createVSpacing(main_layout_, kVSpaceSize);
+  factory_->createVSpacing(main_layout_, kVSpaceSize);
 
-    {
-      YAlignment *mbox = factory_->createMarginBox(main_layout_, kHboxHorMargin,
-                                                   kHboxVertMargin);
-      YAlignment *min_size =
-          factory_->createMinSize(mbox, kHboxHorMinSize, kHboxVertMinSize);
+  {
+    YAlignment *mbox = factory_->createMarginBox(main_layout_, kHboxHorMargin,
+                                                 kHboxVertMargin);
+    YAlignment *min_size =
+        factory_->createMinSize(mbox, kHboxHorMinSize, kHboxVertMinSize);
 
-      feature_layout_ = factory_->createVBox(min_size);
-      user_displayer(main_dialog_, feature_layout_);
-    }
-  };
+    feature_layout_ = factory_->createVBox(min_size);
+    user_displayer(main_dialog_, feature_layout_);
+  }
 }
 
 auto UIBase::handleHelp() const {
@@ -158,35 +154,33 @@ auto UIBase::handleButtons(YEvent *event) -> HandleResult {
   return HandleResult::SUCCESS;
 }
 
-auto UIBase::handleEvent() -> function<void()> {
-  return [this]() {
-    if (main_dialog_ == nullptr) {
-      yuiError() << "main_dialog is nullptr when handling event" << endl;
-      return;
+auto UIBase::handleEvent() -> void {
+  if (main_dialog_ == nullptr) {
+    yuiError() << "main_dialog is nullptr when handling event" << endl;
+    return;
+  }
+
+  auto user_handler = userHandleEvent();
+  while (true) {
+    auto *event = main_dialog_->waitForEvent();
+
+    if (event == nullptr) {
+      yuiError() << "event is nullptr when return from waiting" << endl;
+      std::terminate();
     }
 
-    auto user_handler = userHandleEvent();
-    while (true) {
-      auto *event = main_dialog_->waitForEvent();
-
-      if (event == nullptr) {
-        yuiError() << "event is nullptr when return from waiting" << endl;
-        std::terminate();
-      }
-
-      auto res = handleButtons(event);
-      if (res == HandleResult::EXIT) {
-        exit(0);
-      } else if (res == HandleResult::BREAK) {
-        break;
-      }
-
-      auto user_result = user_handler(event);
-      if (user_result == HandleResult::EXIT) {
-        break;
-      }
+    auto res = handleButtons(event);
+    if (res == HandleResult::EXIT) {
+      exit(0);
+    } else if (res == HandleResult::BREAK) {
+      break;
     }
-  };
+
+    auto user_result = user_handler(event);
+    if (user_result == HandleResult::EXIT) {
+      break;
+    }
+  }
 }
 
 [[nodiscard]] auto UIBase::getParent() const -> weak_ptr<UIBase> {
