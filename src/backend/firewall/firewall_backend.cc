@@ -50,7 +50,7 @@ auto FirewallBackend::getSubconfigs(const shared_ptr<FirewallContext> &context)
     subconfigs = getTableNames();
     break;
   case FirewallLevel::TABLE:
-    subconfigs = getChainNames(context);
+    subconfigs = getChains(context);
     break;
   case FirewallLevel::CHAIN:
     auto rules = getRules(context);
@@ -85,7 +85,7 @@ auto FirewallBackend::createContext(const ctx_t &current, const string &name)
   return context;
 }
 
-auto FirewallBackend::getChainNames(const ctx_t &context) -> vector<string> {
+auto FirewallBackend::getChains(const ctx_t &context) -> vector<string> {
   vector<string> chains;
 
   auto *handle = handles_.at(context->table_);

@@ -44,7 +44,7 @@ public:
 private:
   std::unordered_map<string, struct iptc_handle *> handles_;
 
-  auto getChainNames(const ctx_t &context) -> vector<string>;
+  auto getChains(const ctx_t &context) -> vector<string>;
 
   auto getRules(const ctx_t &context) -> vector<const struct ipt_entry *>;
 
