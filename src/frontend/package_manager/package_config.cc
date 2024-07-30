@@ -6,8 +6,8 @@ auto PackageManagerConfig::userDisplay(YDialog *main_dialog,
                                        DisplayLayout layout) -> DisplayResult {
   auto *main_layout = layout.feature_layout_;
 
-  std::cout << "displaying MainMenu with dialog: " << main_dialog
-            << " and layout: " << main_layout << std::endl;
+  cout << "displaying MainMenu with dialog: " << main_dialog
+       << " and layout: " << main_layout << endl;
 
   occupy(main_layout);
 
@@ -19,14 +19,13 @@ auto PackageManagerConfig::userHandleEvent(YEvent *event) -> HandleResult {
   return HandleResult::SUCCESS;
 }
 
-auto PackageManagerConfig::getComponentDescription() const -> std::string {
-  static std::string componentDescription =
-      R"(Configure package manager settings)";
+auto PackageManagerConfig::getComponentDescription() const -> string {
+  static string componentDescription = R"(Configure package manager settings)";
 
   return componentDescription;
 };
 
-auto PackageManagerConfig::getComponentName() const -> std::string {
-  static std::string componentName = "Package Manager (dnf) Configuration";
+auto PackageManagerConfig::getComponentName() const -> string {
+  static string componentName = "Package Manager (dnf) Configuration";
   return componentName;
 }

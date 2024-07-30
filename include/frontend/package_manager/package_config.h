@@ -5,17 +5,19 @@
 #include "frontend/ui_base.h"
 #include <memory>
 
+using std::cout;
+using std::endl;
+
 class PackageManagerConfig : public UIBase {
 public:
-  PackageManagerConfig(const std::string &name,
-                       const std::shared_ptr<UIBase> &parent)
+  PackageManagerConfig(const string &name, const shared_ptr<UIBase> &parent)
       : UIBase(name, parent){};
 
   ~PackageManagerConfig() override = default;
 
-  [[nodiscard]] auto getComponentDescription() const -> std::string override;
+  [[nodiscard]] auto getComponentDescription() const -> string override;
 
-  [[nodiscard]] auto getComponentName() const -> std::string override;
+  [[nodiscard]] auto getComponentName() const -> string override;
 
 private:
   auto userDisplay(YDialog *main_dialog, DisplayLayout layout)

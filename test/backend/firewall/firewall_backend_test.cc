@@ -14,27 +14,27 @@ protected:
 
   void TearDown() override {}
 
-  std::shared_ptr<FirewallBackend> fwb;
+  shared_ptr<FirewallBackend> fwb;
 };
 
-void TestChainContext(const std::shared_ptr<FirewallBackend> &fwb,
-                      const std::shared_ptr<FirewallContext> &tb_ctx,
-                      const std::string &table, const std::string &chain) {
+void TestChainContext(const shared_ptr<FirewallBackend> &fwb,
+                      const shared_ptr<FirewallContext> &tb_ctx,
+                      const string &table, const string &chain) {
   auto ch_ctx = fwb->createContext(tb_ctx, chain);
 
   ASSERT_EQ(ch_ctx->level_, FirewallLevel::CHAIN);
   ASSERT_EQ(ch_ctx->table_, table);
   ASSERT_EQ(ch_ctx->chain_, chain);
-  std::cout << "Table: " << table << "\tChain: " << chain << endl;
+  cout << "Table: " << table << "\tChain: " << chain << endl;
 
   auto rules = fwb->getSubconfigs(ch_ctx);
   for (const auto &rule : rules) {
-    std::cout << rule << std::endl;
+    cout << rule << endl;
   }
 }
 
-void TestTableContext(const std::shared_ptr<FirewallBackend> &fwb,
-                      const std::string &table) {
+void TestTableContext(const shared_ptr<FirewallBackend> &fwb,
+                      const string &table) {
   auto ctx = std::make_shared<FirewallContext>();
   auto tb_ctx = fwb->createContext(ctx, table);
 
