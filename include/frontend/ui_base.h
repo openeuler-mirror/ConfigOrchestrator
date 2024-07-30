@@ -82,8 +82,9 @@ private:
   YLayoutBox *main_layout_;
 
   YLayoutBox *upper_layout_;
-  YLayoutBox *control_layout_;
+  YLayoutBox *global_control_layout_;
   YLayoutBox *feature_layout_;
+  YLayoutBox *user_control_layout_;
 
   YPushButton *back_button_;
   YPushButton *search_button_;

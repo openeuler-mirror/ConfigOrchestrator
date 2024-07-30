@@ -46,16 +46,18 @@ auto UIBase::display() -> void {
     YAlignment *min_size =
         factory_->createMinSize(mbox, kHboxHorMinSize, kHboxVertMinSize);
 
-    control_layout_ = factory_->createHBox(min_size);
+    global_control_layout_ = factory_->createHBox(min_size);
 
-    back_button_ = factory_->createPushButton(control_layout_, kBackButtonName);
+    back_button_ =
+        factory_->createPushButton(global_control_layout_, kBackButtonName);
     search_button_ =
-        factory_->createPushButton(control_layout_, kSearchButtonName);
+        factory_->createPushButton(global_control_layout_, kSearchButtonName);
     close_button_ =
-        factory_->createPushButton(control_layout_, kCloseButtonName);
+        factory_->createPushButton(global_control_layout_, kCloseButtonName);
     apply_button_ =
-        factory_->createPushButton(control_layout_, kApplyButtonName);
-    help_button_ = factory_->createPushButton(control_layout_, kHelpButtonName);
+        factory_->createPushButton(global_control_layout_, kApplyButtonName);
+    help_button_ =
+        factory_->createPushButton(global_control_layout_, kHelpButtonName);
 
     close_button_->setRole(YButtonRole::YCancelButton);
     apply_button_->setRole(YButtonRole::YApplyButton);
@@ -71,8 +73,20 @@ auto UIBase::display() -> void {
         factory_->createMinSize(mbox, kHboxHorMinSize, kHboxVertMinSize);
 
     feature_layout_ = factory_->createVBox(min_size);
-    userDisplay(main_dialog_, {feature_layout_, feature_layout_});
   }
+
+  factory_->createVSpacing(main_layout_, kVSpaceSize);
+
+  {
+    YAlignment *mbox = factory_->createMarginBox(main_layout_, kHboxHorMargin,
+                                                 kHboxVertMargin);
+    YAlignment *min_size =
+        factory_->createMinSize(mbox, kHboxHorMinSize, kHboxVertMinSize);
+
+    user_control_layout_ = factory_->createVBox(min_size);
+  }
+
+  userDisplay(main_dialog_, {feature_layout_, user_control_layout_});
 }
 
 auto UIBase::handleHelp() const {
