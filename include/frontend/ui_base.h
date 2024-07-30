@@ -31,15 +31,15 @@
 #include <yui/YUI.h>
 #include <yui/YWidgetFactory.h>
 
-class ConfigManager;
-class ConfigBackendBase;
-
-using config_id_t = uint32_t;
+using std::function;
+using std::shared_ptr;
+using std::string;
+using std::weak_ptr;
 
 class UIBase : public std::enable_shared_from_this<UIBase> {
 public:
-  UIBase(std::string name, const std::shared_ptr<UIBase> &parent)
-      : name_(std::move(name)), parent_(parent), main_dialog_(nullptr) {
+  UIBase(string name, const shared_ptr<UIBase> &parent)
+      : name_(move(name)), parent_(parent), main_dialog_(nullptr) {
     factory_ = YUI::widgetFactory();
   }
 
@@ -49,27 +49,27 @@ public:
     }
   }
 
-  auto display() -> std::function<void()>;
+  auto display() -> function<void()>;
 
-  auto handleEvent() -> std::function<void()>;
+  auto handleEvent() -> function<void()>;
 
-  auto warnDialog(const std::string &warning) -> void;
+  auto warnDialog(const string &warning) -> void;
 
   auto isMainMenu() -> bool;
 
-  auto getName() const -> std::string;
+  auto getName() const -> string;
 
-  [[nodiscard]] auto getParent() const -> std::weak_ptr<UIBase>;
+  [[nodiscard]] auto getParent() const -> weak_ptr<UIBase>;
 
   [[nodiscard]] auto getFactory() const -> YWidgetFactory *;
 
-  [[nodiscard]] virtual auto getComponentDescription() const -> std::string = 0;
+  [[nodiscard]] virtual auto getComponentDescription() const -> string = 0;
 
-  [[nodiscard]] virtual auto getComponentName() const -> std::string = 0;
+  [[nodiscard]] virtual auto getComponentName() const -> string = 0;
 
 private:
-  std::string name_;
-  std::weak_ptr<UIBase> parent_;
+  string name_;
+  weak_ptr<UIBase> parent_;
 
   YWidgetFactory *factory_;
   YDialog *main_dialog_;
@@ -94,20 +94,19 @@ private:
   static constexpr YLayoutSize_t kPopDialogMinWidth = 60;
   static constexpr YLayoutSize_t kPopDialogMinHeight = 10;
 
-  static const std::string kSoftwareName;
-  static const std::string kBackButtonName;
-  static const std::string kSearchButtonName;
-  static const std::string kCloseButtonName;
-  static const std::string kApplyButtonName;
-  static const std::string kHelpButtonName;
-  static const std::string kWarnDialogTitle;
+  static const string kSoftwareName;
+  static const string kBackButtonName;
+  static const string kSearchButtonName;
+  static const string kCloseButtonName;
+  static const string kApplyButtonName;
+  static const string kHelpButtonName;
+  static const string kWarnDialogTitle;
 
   virtual auto userDisplay()
-      -> std::function<DisplayResult(YDialog *main_dialog,
-                                     YLayoutBox *main_layout_)> = 0;
+      -> function<DisplayResult(YDialog *main_dialog,
+                                YLayoutBox *main_layout_)> = 0;
 
-  virtual auto userHandleEvent()
-      -> std::function<HandleResult(YEvent *event)> = 0;
+  virtual auto userHandleEvent() -> function<HandleResult(YEvent *event)> = 0;
 
   [[nodiscard]] auto handleButtons(YEvent *event) -> HandleResult;
 

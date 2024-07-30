@@ -14,15 +14,15 @@
 #include <string>
 #include <type_traits>
 
-const std::string UIBase::kSoftwareName = "Control Panel";
-const std::string UIBase::kBackButtonName = "&Back";
-const std::string UIBase::kSearchButtonName = "&Search";
-const std::string UIBase::kCloseButtonName = "&Close";
-const std::string UIBase::kApplyButtonName = "&Apply";
-const std::string UIBase::kHelpButtonName = "&Help";
-const std::string UIBase::kWarnDialogTitle = "Warning";
+const string UIBase::kSoftwareName = "Control Panel";
+const string UIBase::kBackButtonName = "&Back";
+const string UIBase::kSearchButtonName = "&Search";
+const string UIBase::kCloseButtonName = "&Close";
+const string UIBase::kApplyButtonName = "&Apply";
+const string UIBase::kHelpButtonName = "&Help";
+const string UIBase::kWarnDialogTitle = "Warning";
 
-auto UIBase::display() -> std::function<void()> {
+auto UIBase::display() -> function<void()> {
   return [this]() {
     auto user_displayer = userDisplay();
     main_dialog_ = factory_->createDialog(YDialogType::YMainDialog);
@@ -96,8 +96,7 @@ auto UIBase::handleHelp() const {
 }
 
 auto UIBase::handleExit() const -> bool {
-  const static std::string msg =
-      "There are unsaved changes. Do you want to exit?";
+  const static string msg = "There are unsaved changes. Do you want to exit?";
   YWidgetFactory *fac = YUI::widgetFactory();
   YDialog *dialog = fac->createPopupDialog();
 
@@ -159,10 +158,10 @@ auto UIBase::handleButtons(YEvent *event) -> HandleResult {
   return HandleResult::SUCCESS;
 }
 
-auto UIBase::handleEvent() -> std::function<void()> {
+auto UIBase::handleEvent() -> function<void()> {
   return [this]() {
     if (main_dialog_ == nullptr) {
-      yuiError() << "main_dialog is nullptr when handling event" << std::endl;
+      yuiError() << "main_dialog is nullptr when handling event" << endl;
       return;
     }
 
@@ -171,13 +170,13 @@ auto UIBase::handleEvent() -> std::function<void()> {
       auto *event = main_dialog_->waitForEvent();
 
       if (event == nullptr) {
-        yuiError() << "event is nullptr when return from waiting" << std::endl;
+        yuiError() << "event is nullptr when return from waiting" << endl;
         std::terminate();
       }
 
       auto res = handleButtons(event);
       if (res == HandleResult::EXIT) {
-        std::exit(0);
+        exit(0);
       } else if (res == HandleResult::BREAK) {
         break;
       }
@@ -190,7 +189,7 @@ auto UIBase::handleEvent() -> std::function<void()> {
   };
 }
 
-[[nodiscard]] auto UIBase::getParent() const -> std::weak_ptr<UIBase> {
+[[nodiscard]] auto UIBase::getParent() const -> weak_ptr<UIBase> {
   return parent_;
 }
 
@@ -200,7 +199,7 @@ auto UIBase::handleEvent() -> std::function<void()> {
 
 auto UIBase::isMainMenu() -> bool { return parent_.expired(); }
 
-auto UIBase::warnDialog(const std::string &warning) -> void {
+auto UIBase::warnDialog(const string &warning) -> void {
   YDialog *dialog = factory_->createPopupDialog();
 
   YLayoutBox *vbox = factory_->createVBox(dialog);
@@ -218,4 +217,4 @@ auto UIBase::warnDialog(const std::string &warning) -> void {
   dialog->destroy();
 }
 
-auto UIBase::getName() const -> std::string { return name_; }
+auto UIBase::getName() const -> string { return name_; }
