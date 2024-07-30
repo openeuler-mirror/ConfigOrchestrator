@@ -1,12 +1,6 @@
 #ifndef ui_base_H
 #define ui_base_H
 
-#include "YDialog.h"
-#include "YEvent.h"
-#include "YLabel.h"
-#include "YLayoutBox.h"
-#include "YUI.h"
-#include "YWidgetFactory.h"
 #include "controlpanel.h"
 
 #include <cstdint>
@@ -18,6 +12,13 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "YDialog.h"
+#include "YEvent.h"
+#include "YLabel.h"
+#include "YLayoutBox.h"
+#include "YUI.h"
+#include "YWidgetFactory.h"
 #include <yui/YAlignment.h>
 #include <yui/YApplication.h>
 #include <yui/YDialog.h>
