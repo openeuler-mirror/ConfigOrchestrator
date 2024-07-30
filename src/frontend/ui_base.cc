@@ -83,7 +83,7 @@ auto UIBase::display() -> void {
     YAlignment *min_size =
         factory_->createMinSize(mbox, kHboxHorMinSize, kHboxVertMinSize);
 
-    user_control_layout_ = factory_->createVBox(min_size);
+    user_control_layout_ = factory_->createHBox(min_size);
   }
 
   userDisplay(main_dialog_, {feature_layout_, user_control_layout_});

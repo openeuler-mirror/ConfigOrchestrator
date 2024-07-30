@@ -45,6 +45,11 @@ public:
 
   static auto createContext(const ctx_t &current, const string &name) -> ctx_t;
 
+  /* remove chain when level is chain, rule when level is rule
+   * return false when other level call this function
+   */
+  auto remove(const ctx_t &context) -> bool;
+
 private:
   unordered_map<string, struct iptc_handle *> handles_;
 

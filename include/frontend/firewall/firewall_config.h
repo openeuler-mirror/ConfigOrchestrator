@@ -34,13 +34,25 @@ private:
 
   auto userHandleEvent(YEvent *event) -> HandleResult override;
 
+  auto userControlHandle(YEvent *event) -> HandleResult;
+
   shared_ptr<FirewallContext> firewall_context_;
   shared_ptr<FirewallBackend> firewall_backend_;
 
   vector<string> subConfigs_;
   vector<YPushButton *> buttons_;
 
-  const static string nonSuWarnText;
+  /* user control zone */
+  YPushButton *add_chain_button_;
+  YPushButton *add_rule_button_;
+  YPushButton *del_chain_button_;
+  YPushButton *del_rule_button_;
+
+  const static string kNonSuWarnText;
+  const static string kAddRuleButtonText;
+  const static string kAddChainButtonText;
+  const static string kDelRuleButtonText;
+  const static string kDelChainButtonText;
 };
 
 #endif

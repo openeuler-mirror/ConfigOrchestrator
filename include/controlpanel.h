@@ -29,7 +29,7 @@
 #include <yui/YUI.h>
 #include <yui/YWidgetFactory.h>
 
-enum class HandleResult : unsigned int { SUCCESS, BREAK, EXIT, NEW_PAGE };
+enum class HandleResult : unsigned int { SUCCESS, BREAK, EXIT, NEW_PAGE, CONT };
 
 enum class DisplayResult : unsigned int { SUCCESS, ERROR };
 

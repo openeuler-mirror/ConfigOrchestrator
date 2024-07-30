@@ -110,6 +110,23 @@ auto FirewallBackend::getRules(const ctx_t &context)
   return rules;
 }
 
+auto FirewallBackend::remove(const ctx_t &context) -> bool {
+  if (context->level_ == FirewallLevel::CHAIN) {
+    return iptc_delete_chain(context->chain_.c_str(),
+                             handles_.at(context->table_)) == 0;
+  }
+
+  if (context->level_ == FirewallLevel::OVERALL) {
+    auto *handle = handles_.at(context->table_);
+    (void)handle;
+  } else {
+    yuiError() << "Cannot remove from table." << endl;
+    return false;
+  }
+
+  return true;
+}
+
 auto FirewallBackend::serializeRule(const struct ipt_entry *rule) -> string {
   ostringstream ss;
 
