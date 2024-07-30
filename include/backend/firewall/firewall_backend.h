@@ -9,6 +9,7 @@
 #include "tools/cplog.h"
 #include "tools/sys.h"
 
+#include <functional>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -26,6 +27,8 @@ public:
   FirewallBackend();
 
   ~FirewallBackend() override;
+
+  auto apply() -> std::function<bool()>;
 
   static auto getTableNames() -> vector<string> {
     static vector<string> tables = {"filter", "nat", "mangle", "raw",

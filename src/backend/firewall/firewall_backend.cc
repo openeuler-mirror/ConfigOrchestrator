@@ -1,6 +1,7 @@
 #include "backend/firewall/firewall_backend.h"
 
 #include <arpa/inet.h>
+#include <bits/ranges_algo.h>
 #include <memory>
 #include <sstream>
 #include <vector>
@@ -25,6 +26,19 @@ FirewallBackend::~FirewallBackend() {
       iptc_free(handle_);
     }
   }
+}
+
+auto FirewallBackend::apply() -> std::function<bool()> {
+  return [this]() {
+    if (!std::ranges::all_of(handles_, [](const auto &handle) {
+          return iptc_commit(handle.second) == 0;
+        })) {
+      yuiError() << "Error committing iptables's table: "
+                 << iptc_strerror(errno) << endl;
+      return false;
+    }
+    return true;
+  };
 }
 
 auto FirewallBackend::getSubconfigs(const shared_ptr<FirewallContext> &context)
