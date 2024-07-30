@@ -8,12 +8,11 @@
 #include <memory>
 #include <string>
 
-const std::string MainMenu::FirewallConfigName = "Firewall Config";
-const std::string MainMenu::PackageManagerName = "Package Manager Config";
+const string MainMenu::FirewallConfigName = "Firewall Config";
+const string MainMenu::PackageManagerName = "Package Manager Config";
 
 auto MainMenu::userDisplay()
-    -> std::function<DisplayResult(YDialog *main_dialog,
-                                   YLayoutBox *main_layout_)> {
+    -> function<DisplayResult(YDialog *main_dialog, YLayoutBox *main_layout_)> {
   return
       [this](YDialog *main_dialog, YLayoutBox *main_layout_) -> DisplayResult {
         (void)main_dialog;
@@ -30,7 +29,7 @@ auto MainMenu::userDisplay()
       };
 }
 
-auto MainMenu::userHandleEvent() -> std::function<HandleResult(YEvent *event)> {
+auto MainMenu::userHandleEvent() -> function<HandleResult(YEvent *event)> {
   return [this]([[maybe_unused]] YEvent *event) -> HandleResult {
     for (size_t i = 0; i < menu_buttons_.size(); i++) {
       if (event->widget() == menu_buttons_[i]) {
@@ -45,16 +44,16 @@ auto MainMenu::userHandleEvent() -> std::function<HandleResult(YEvent *event)> {
   };
 }
 
-auto MainMenu::getComponentDescription() const -> std::string {
-  static std::string componentDescription =
+auto MainMenu::getComponentDescription() const -> string {
+  static string componentDescription =
       R"(Main Menu of Control Panel of OpenEuler.
         Developed in 2024 OSPP.)";
 
   return componentDescription;
 };
 
-auto MainMenu::getComponentName() const -> std::string {
-  static std::string componentName = "Main Menu";
+auto MainMenu::getComponentName() const -> string {
+  static string componentName = "Main Menu";
   return componentName;
 }
 
@@ -63,8 +62,7 @@ auto MainMenu::getMenuConfigs() -> vector<tuple<string, menu_render>> & {
       {FirewallConfigName,
        [this]() {
          auto parent = shared_from_this();
-         auto child =
-             std::make_shared<FirewallConfig>(FirewallConfigName, parent);
+         auto child = make_shared<FirewallConfig>(FirewallConfigName, parent);
 
          auto display = child->display();
          auto handler = child->handleEvent();
@@ -76,7 +74,7 @@ auto MainMenu::getMenuConfigs() -> vector<tuple<string, menu_render>> & {
       {PackageManagerName, [this]() {
          auto parent = shared_from_this();
          auto child =
-             std::make_shared<PackageManagerConfig>(PackageManagerName, parent);
+             make_shared<PackageManagerConfig>(PackageManagerName, parent);
 
          auto display = child->display();
          auto handler = child->handleEvent();
