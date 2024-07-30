@@ -9,6 +9,7 @@
 #include "tools/cplog.h"
 #include "tools/sys.h"
 
+#include <bits/ranges_algo.h>
 #include <functional>
 #include <memory>
 #include <sstream>
@@ -17,9 +18,12 @@
 #include <utility>
 #include <vector>
 
+using std::function;
 using std::ostringstream;
 using std::shared_ptr;
 using std::string;
+using std::stringstream;
+using std::unordered_map;
 using std::vector;
 
 class FirewallBackend : public ConfigBackendBase {
@@ -28,7 +32,7 @@ public:
 
   ~FirewallBackend() override;
 
-  auto apply() -> std::function<bool()>;
+  auto apply() -> function<bool()>;
 
   static auto getTableNames() -> vector<string> {
     static vector<string> tables = {"filter", "nat", "mangle", "raw",
@@ -42,7 +46,7 @@ public:
   static auto createContext(const ctx_t &current, const string &name) -> ctx_t;
 
 private:
-  std::unordered_map<string, struct iptc_handle *> handles_;
+  unordered_map<string, struct iptc_handle *> handles_;
 
   auto getChains(const ctx_t &context) -> vector<string>;
 
@@ -55,11 +59,11 @@ private:
 
   static auto shortSerializeRule(const struct ipt_entry *rule) -> string;
 
-  static auto ip2String(uint32_t ip) -> std::string;
+  static auto ip2String(uint32_t ip) -> string;
 
-  static auto iface2String(const char *iface) -> std::string;
+  static auto iface2String(const char *iface) -> string;
 
-  static auto proto2String(uint8_t proto) -> std::string;
+  static auto proto2String(uint8_t proto) -> string;
 
   static constexpr auto kICMPType = 1;
   static constexpr auto kTCPType = 6;

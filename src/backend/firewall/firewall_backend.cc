@@ -28,7 +28,7 @@ FirewallBackend::~FirewallBackend() {
   }
 }
 
-auto FirewallBackend::apply() -> std::function<bool()> {
+auto FirewallBackend::apply() -> function<bool()> {
   return [this]() {
     if (!std::ranges::all_of(handles_, [](const auto &handle) {
           return iptc_commit(handle.second) == 0;
@@ -65,8 +65,7 @@ auto FirewallBackend::getSubconfigs(const shared_ptr<FirewallContext> &context)
 
 auto FirewallBackend::createContext(const ctx_t &current, const string &name)
     -> ctx_t {
-  shared_ptr<FirewallContext> context =
-      std::make_shared<FirewallContext>(current);
+  shared_ptr<FirewallContext> context = make_shared<FirewallContext>(current);
 
   switch (context->level_) {
   case FirewallLevel::OVERALL:
@@ -151,7 +150,7 @@ auto FirewallBackend::deserializeRule(const string &rule)
   string line;
   string proto;
 
-  std::stringstream ss(rule);
+  stringstream ss(rule);
   auto new_rule = std::make_unique<struct ipt_entry>();
 
   getline(ss, line, ':');
@@ -201,17 +200,17 @@ auto FirewallBackend::deserializeRule(const string &rule)
   return new_rule.release();
 }
 
-auto FirewallBackend::ip2String(uint32_t ip) -> std::string {
+auto FirewallBackend::ip2String(uint32_t ip) -> string {
   struct in_addr in;
   in.s_addr = ip;
   return inet_ntoa(in);
 }
 
-auto FirewallBackend::iface2String(const char *iface) -> std::string {
-  return std::string(reinterpret_cast<const char *>(iface));
+auto FirewallBackend::iface2String(const char *iface) -> string {
+  return string(reinterpret_cast<const char *>(iface));
 }
 
-auto FirewallBackend::proto2String(uint8_t proto) -> std::string {
+auto FirewallBackend::proto2String(uint8_t proto) -> string {
   switch (proto) {
   case kTCPType:
     return "TCP";
