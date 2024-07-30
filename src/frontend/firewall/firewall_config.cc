@@ -15,6 +15,8 @@ const string FirewallConfig::kAddRuleButtonText = "&Add Firewall Rule";
 const string FirewallConfig::kAddChainButtonText = "&Add Firewall Chain";
 const string FirewallConfig::kDelRuleButtonText = "&Delete Firewall Rule";
 const string FirewallConfig::kDelChainButtonText = "&Delete Firewall Chain";
+const string FirewallConfig::kUpdateRuleDialogTitle = "Update Firewall Rule";
+const string FirewallConfig::kInsertRuleDialogTitle = "Insert Firewall Rule";
 
 FirewallConfig::FirewallConfig(const string &name,
                                const shared_ptr<UIBase> &parent,
@@ -66,34 +68,23 @@ auto FirewallConfig::userDisplay(YDialog *main_dialog, DisplayLayout layout)
 
 auto FirewallConfig::userControlHandle(YEvent *event) -> HandleResult {
   if (event->widget() == add_chain_button_) {
-    auto context = firewall_backend_->createContext(firewall_context_, "");
-
-    auto child = std::make_shared<FirewallConfig>("New Chain",
-                                                  shared_from_this(), context);
-
-    child->display();
-    child->handleEvent();
+    createChain();
   } else if (event->widget() == add_rule_button_) {
-    auto context = firewall_backend_->createContext(firewall_context_, "");
-
-    auto child = std::make_shared<FirewallConfig>("New Rule",
-                                                  shared_from_this(), context);
-
-    child->display();
-    child->handleEvent();
+    createUpdateRule(nullptr);
   } else if (event->widget() == del_chain_button_ ||
              event->widget() == del_rule_button_) {
     auto res = firewall_backend_->remove(firewall_context_);
     if (!res) {
       stringstream ss;
       ss << "Failed to remove chain/rule: " << firewall_context_->serialize();
-
       this->warnDialog(ss.str());
+
       return HandleResult::SUCCESS;
     }
   } else {
     return HandleResult::CONT;
   }
+
   return HandleResult::SUCCESS;
 }
 
@@ -130,4 +121,35 @@ auto FirewallConfig::getComponentName() const -> string {
   static string componentName = "Network Firewall Configuration";
 
   return getName();
+}
+
+auto FirewallConfig::createUpdateRule(const ipt_entry *origin)
+    -> shared_ptr<ipt_entry> {
+  auto *fac = getFactory();
+  YDialog *dialog = fac->createPopupDialog();
+
+  YLayoutBox *vbox = fac->createVBox(dialog);
+
+  if (origin == nullptr) { // add new rule
+    fac->createLabel(vbox, kInsertRuleDialogTitle);
+  } else { // update exist rule
+    fac->createLabel(vbox, kUpdateRuleDialogTitle);
+  }
+  auto *ok = fac->createPushButton(vbox, "OK");
+  auto *cancel = fac->createPushButton(vbox, "Cancel");
+
+  auto *event = dialog->waitForEvent();
+  if (event->widget() == ok) {
+    auto entry = std::make_shared<ipt_entry>();
+
+    return entry;
+  }
+
+  dialog->destroy();
+  return nullptr;
+}
+auto FirewallConfig::createChain() -> bool {
+  (void)firewall_backend_;
+
+  return false;
 }

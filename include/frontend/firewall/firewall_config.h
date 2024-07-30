@@ -36,6 +36,10 @@ private:
 
   auto userControlHandle(YEvent *event) -> HandleResult;
 
+  auto createUpdateRule(const ipt_entry *origin) -> shared_ptr<ipt_entry>;
+
+  auto createChain() -> bool;
+
   shared_ptr<FirewallContext> firewall_context_;
   shared_ptr<FirewallBackend> firewall_backend_;
 
@@ -53,6 +57,8 @@ private:
   const static string kAddChainButtonText;
   const static string kDelRuleButtonText;
   const static string kDelChainButtonText;
+  const static string kUpdateRuleDialogTitle;
+  const static string kInsertRuleDialogTitle;
 };
 
 #endif
