@@ -23,7 +23,6 @@ const string UIBase::kHelpButtonName = "&Help";
 const string UIBase::kWarnDialogTitle = "Warning";
 
 auto UIBase::display() -> void {
-  auto user_displayer = userDisplay();
   main_dialog_ = factory_->createDialog(YDialogType::YMainDialog);
   main_layout_ = factory_->createVBox(main_dialog_);
   main_layout_->setStretchable(YUIDimension::YD_HORIZ, true);
@@ -72,7 +71,7 @@ auto UIBase::display() -> void {
         factory_->createMinSize(mbox, kHboxHorMinSize, kHboxVertMinSize);
 
     feature_layout_ = factory_->createVBox(min_size);
-    user_displayer(main_dialog_, feature_layout_);
+    userDisplay(main_dialog_, {feature_layout_, feature_layout_});
   }
 }
 
@@ -160,7 +159,6 @@ auto UIBase::handleEvent() -> void {
     return;
   }
 
-  auto user_handler = userHandleEvent();
   while (true) {
     auto *event = main_dialog_->waitForEvent();
 
@@ -176,7 +174,7 @@ auto UIBase::handleEvent() -> void {
       break;
     }
 
-    auto user_result = user_handler(event);
+    auto user_result = userHandleEvent(event);
     if (user_result == HandleResult::EXIT) {
       break;
     }

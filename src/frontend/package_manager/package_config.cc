@@ -2,26 +2,23 @@
 
 #include <iostream>
 
-auto PackageManagerConfig::userDisplay()
-    -> std::function<DisplayResult(YDialog *main_dialog,
-                                   YLayoutBox *main_layout_)> {
-  return
-      [this](YDialog *main_dialog, YLayoutBox *main_layout_) -> DisplayResult {
-        std::cout << "displaying MainMenu with dialog: " << main_dialog
-                  << " and layout: " << main_layout_ << std::endl;
+auto PackageManagerConfig::userDisplay(YDialog *main_dialog,
+                                       DisplayLayout layout) -> DisplayResult {
+  auto *main_layout = layout.feature_layout_;
 
-        occupy(main_layout_);
+  std::cout << "displaying MainMenu with dialog: " << main_dialog
+            << " and layout: " << main_layout << std::endl;
 
-        return DisplayResult::SUCCESS;
-      };
+  occupy(main_layout);
+
+  return DisplayResult::SUCCESS;
 }
 
-auto PackageManagerConfig::userHandleEvent()
-    -> std::function<HandleResult(YEvent *event)> {
-  return []([[maybe_unused]] YEvent *event) -> HandleResult {
-    return HandleResult{};
-  };
+auto PackageManagerConfig::userHandleEvent(YEvent *event) -> HandleResult {
+  (void)event;
+  return HandleResult::SUCCESS;
 }
+
 auto PackageManagerConfig::getComponentDescription() const -> std::string {
   static std::string componentDescription =
       R"(Configure package manager settings)";

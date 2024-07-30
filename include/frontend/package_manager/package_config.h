@@ -18,11 +18,10 @@ public:
   [[nodiscard]] auto getComponentName() const -> std::string override;
 
 private:
-  auto userDisplay()
-      -> std::function<DisplayResult(YDialog *main_dialog,
-                                     YLayoutBox *main_layout_)> override;
+  auto userDisplay(YDialog *main_dialog, DisplayLayout layout)
+      -> DisplayResult override;
 
-  auto userHandleEvent() -> std::function<HandleResult(YEvent *event)> override;
+  auto userHandleEvent(YEvent *event) -> HandleResult override;
 };
 
 #endif // package_config_H

@@ -36,6 +36,12 @@ using std::shared_ptr;
 using std::string;
 using std::weak_ptr;
 
+class DisplayLayout {
+public:
+  YLayoutBox *feature_layout_;
+  YLayoutBox *user_control_layout_;
+};
+
 class UIBase : public std::enable_shared_from_this<UIBase> {
 public:
   UIBase(string name, const shared_ptr<UIBase> &parent)
@@ -102,11 +108,10 @@ private:
   static const string kHelpButtonName;
   static const string kWarnDialogTitle;
 
-  virtual auto userDisplay()
-      -> function<DisplayResult(YDialog *main_dialog,
-                                YLayoutBox *main_layout_)> = 0;
+  virtual auto userDisplay(YDialog *main_dialog, DisplayLayout layout)
+      -> DisplayResult = 0;
 
-  virtual auto userHandleEvent() -> function<HandleResult(YEvent *event)> = 0;
+  virtual auto userHandleEvent(YEvent *event) -> HandleResult = 0;
 
   [[nodiscard]] auto handleButtons(YEvent *event) -> HandleResult;
 

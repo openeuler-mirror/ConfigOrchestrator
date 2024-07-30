@@ -29,11 +29,10 @@ public:
   [[nodiscard]] auto getComponentName() const -> string override;
 
 private:
-  auto userDisplay()
-      -> function<DisplayResult(YDialog *main_dialog,
-                                YLayoutBox *main_layout_)> override;
+  auto userDisplay(YDialog *main_dialog, DisplayLayout layout)
+      -> DisplayResult override;
 
-  auto userHandleEvent() -> function<HandleResult(YEvent *event)> override;
+  auto userHandleEvent(YEvent *event) -> HandleResult override;
 
   shared_ptr<FirewallContext> firewall_context_;
   shared_ptr<FirewallBackend> firewall_backend_;

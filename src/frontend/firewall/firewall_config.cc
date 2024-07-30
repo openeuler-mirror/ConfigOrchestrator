@@ -25,41 +25,36 @@ FirewallConfig::FirewallConfig(const string &name,
   subConfigs_ = firewall_backend_->getSubconfigs(firewall_context_);
 };
 
-auto FirewallConfig::userDisplay()
-    -> function<DisplayResult(YDialog *main_dialog, YLayoutBox *main_layout_)> {
-  return
-      [this](YDialog *main_dialog, YLayoutBox *main_layout_) -> DisplayResult {
-        (void)main_dialog;
+auto FirewallConfig::userDisplay(YDialog *main_dialog, DisplayLayout layout)
+    -> DisplayResult {
+  (void)main_dialog;
 
-        for (const auto &child : subConfigs_) {
-          auto *button = getFactory()->createPushButton(main_layout_, child);
-          buttons_.emplace_back(button);
-        }
+  auto *main_layout = layout.feature_layout_;
+  for (const auto &child : subConfigs_) {
+    auto *button = getFactory()->createPushButton(main_layout, child);
+    buttons_.emplace_back(button);
+  }
 
-        return DisplayResult::SUCCESS;
-      };
+  return DisplayResult::SUCCESS;
 }
 
-auto FirewallConfig::userHandleEvent()
-    -> function<HandleResult(YEvent *event)> {
-  return [this]([[maybe_unused]] YEvent *event) -> HandleResult {
-    for (auto i = 0; i < buttons_.size(); i++) {
-      if (event->widget() == buttons_[i]) {
-        auto context =
-            firewall_backend_->createContext(firewall_context_, subConfigs_[i]);
+auto FirewallConfig::userHandleEvent(YEvent *event) -> HandleResult {
+  for (auto i = 0; i < buttons_.size(); i++) {
+    if (event->widget() == buttons_[i]) {
+      auto context =
+          firewall_backend_->createContext(firewall_context_, subConfigs_[i]);
 
-        auto child = std::make_shared<FirewallConfig>(
-            subConfigs_[i], shared_from_this(), context);
+      auto child = std::make_shared<FirewallConfig>(
+          subConfigs_[i], shared_from_this(), context);
 
-        child->display();
-        child->handleEvent();
+      child->display();
+      child->handleEvent();
 
-        break;
-      }
+      break;
     }
+  }
 
-    return HandleResult::SUCCESS;
-  };
+  return HandleResult::SUCCESS;
 }
 
 auto FirewallConfig::getComponentDescription() const -> string {
