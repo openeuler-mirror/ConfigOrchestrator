@@ -24,23 +24,9 @@ auto tuple2Ip(const std::tuple<uint8_t, uint8_t, uint8_t, uint8_t> &tuple)
   return ip;
 }
 
-auto ip2String(uint32_t ip) -> string {
-  struct in_addr in;
-  in.s_addr = ip;
-  return inet_ntoa(in);
-}
-
-auto iface2String(const char *iface) -> string {
-  return string(reinterpret_cast<const char *>(iface));
-}
-
 auto protocols() -> vector<tuple<string, uint8_t>> {
-  static constexpr auto kICMPType = 1;
-  static constexpr auto kTCPType = 6;
-  static constexpr auto kUDPType = 17;
-
-  static vector<tuple<string, uint8_t>> r = {
-      {"TCP", kTCPType}, {"UDP", kUDPType}, {"ICMP", kICMPType}};
+  static vector<tuple<string, uint8_t>> r = {{"TCP", IPPROTO_TCP},
+                                             {"UDP", IPPROTO_UDP}};
   return r;
 }
 

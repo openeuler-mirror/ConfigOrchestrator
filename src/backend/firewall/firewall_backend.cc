@@ -15,6 +15,7 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sstream>
+#include <string>
 #include <vector>
 
 auto FirewallBackend::createHandlers() -> bool {
@@ -306,15 +307,15 @@ auto FirewallBackend::addRule(const ctx_t &context,
 auto FirewallBackend::serializeRule(const struct ipt_entry *rule) -> string {
   ostringstream ss;
 
-  ss << "Source IP: " << ip2String(rule->ip.src.s_addr) << "\n";
-  ss << "Destination IP: " << ip2String(rule->ip.dst.s_addr) << "\n";
-  ss << "Source Mask: " << ip2String(rule->ip.smsk.s_addr) << "\n";
-  ss << "Destination Mask: " << ip2String(rule->ip.dmsk.s_addr) << "\n";
+  ss << "Source IP: " << string(inet_ntoa(rule->ip.src)) << "\n";
+  ss << "Destination IP: " << string(inet_ntoa(rule->ip.dst)) << "\n";
+  ss << "Source Mask: " << string(inet_ntoa(rule->ip.smsk)) << "\n";
+  ss << "Destination Mask: " << string(inet_ntoa(rule->ip.dmsk)) << "\n";
   ss << "Protocol: " << proto2String(rule->ip.proto) << "\n";
   ss << "Flags: " << static_cast<int>(rule->ip.flags) << "\n";
   ss << "Inverse Flags: " << static_cast<int>(rule->ip.invflags) << "\n";
-  ss << "Input Interface: " << iface2String(rule->ip.iniface) << "\n";
-  ss << "Output Interface: " << iface2String(rule->ip.outiface) << "\n";
+  ss << "Input Interface: " << string(rule->ip.iniface) << "\n";
+  ss << "Output Interface: " << string(rule->ip.outiface) << "\n";
   ss << "Nf Cache: " << rule->nfcache << "\n";
   ss << "Target Offset: " << rule->target_offset << "\n";
   ss << "Next Offset: " << rule->next_offset << "\n";
@@ -357,10 +358,10 @@ auto FirewallBackend::shortSerializeRule(const struct ipt_entry *rule)
     -> string {
   ostringstream ss;
 
-  ss << "SRC: " << ip2String(rule->ip.src.s_addr) << "/"
-     << ip2String(rule->ip.smsk.s_addr)
-     << ", DST: " << ip2String(rule->ip.dst.s_addr) << "/"
-     << ip2String(rule->ip.dmsk.s_addr)
+  ss << "SRC: " << string(inet_ntoa(rule->ip.src)) << "/"
+     << string(inet_ntoa(rule->ip.smsk))
+     << ", DST: " << string(inet_ntoa(rule->ip.dst)) << "/"
+     << string(inet_ntoa(rule->ip.dmsk))
      << " | PROTO: " << proto2String(rule->ip.proto);
 
   return ss.str();
