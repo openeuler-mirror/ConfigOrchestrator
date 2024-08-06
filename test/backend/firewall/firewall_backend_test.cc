@@ -1,20 +1,45 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <memory>
+#include <optional>
+#include <string>
+#include <tuple>
 
 #include "backend/firewall/firewall_backend.h"
+#include "backend/firewall/firewall_context.h"
 #include "tools/cplog.h"
 
 using std::cout;
 using std::endl;
+using std::make_optional;
+using std::make_shared;
+using std::make_tuple;
+using std::nullopt;
 
 class FirewallTest : public ::testing::Test {
 protected:
-  void SetUp() override { fwb = std::make_shared<FirewallBackend>(); }
+  void SetUp() override {
+    fwb = make_shared<FirewallBackend>();
+    write_context = make_shared<FirewallContext>();
+    write_context = fwb->createContext(write_context, write_table);
+    write_context = fwb->createContext(write_context, write_chain);
+
+    ASSERT_EQ(write_context->level_, FirewallLevel::CHAIN);
+    ASSERT_EQ(write_context->table_, write_table);
+    ASSERT_EQ(write_context->chain_, write_chain);
+
+    auto rules = fwb->getSubconfigs(write_context);
+    rule_num = static_cast<int>(rules.size());
+  }
 
   void TearDown() override {}
 
+  const string write_table = "filter";
+  const string write_chain = "INPUT";
+
+  int rule_num;
   shared_ptr<FirewallBackend> fwb;
+  shared_ptr<FirewallContext> write_context;
 };
 
 void TestChainContext(const shared_ptr<FirewallBackend> &fwb,
@@ -35,7 +60,7 @@ void TestChainContext(const shared_ptr<FirewallBackend> &fwb,
 
 void TestTableContext(const shared_ptr<FirewallBackend> &fwb,
                       const string &table) {
-  auto ctx = std::make_shared<FirewallContext>();
+  auto ctx = make_shared<FirewallContext>();
   auto tb_ctx = fwb->createContext(ctx, table);
 
   ASSERT_EQ(tb_ctx->level_, FirewallLevel::TABLE);
@@ -48,12 +73,43 @@ void TestTableContext(const shared_ptr<FirewallBackend> &fwb,
 }
 
 TEST_F(FirewallTest, get_chain) {
-  auto ctx = std::make_shared<FirewallContext>();
+  auto ctx = make_shared<FirewallContext>();
   auto tables = fwb->getTableNames();
   for (const auto &table : tables) {
     TestTableContext(fwb, table);
   }
 }
+
+TEST_F(FirewallTest, add_rule) {
+  // insert a rule
+  auto rule_request = make_shared<RuleRequest>(
+      1, make_optional<string>("10.201.0.238"),
+      make_optional<string>("255.255.255.255"), nullopt, nullopt,
+      RequestProto::UDP, nullopt, nullopt,
+      vector<RuleMatch>{
+          RuleMatch{nullopt, optional<tuple<string, string>>(
+                                 make_tuple<string, string>("22", "22"))}},
+      "ACCEPT");
+
+  auto r = fwb->addRule(write_context, rule_request);
+  ASSERT_TRUE(r);
+
+  auto commit = fwb->apply();
+  ASSERT_TRUE(commit());
+
+  auto rules = fwb->getSubconfigs(write_context);
+  ASSERT_EQ(rule_num + 1, static_cast<int>(rules.size()));
+
+  // remove the rule
+  auto res = fwb->removeRule(write_context, 1);
+  ASSERT_TRUE(res);
+
+  ASSERT_TRUE(commit());
+
+  rules = fwb->getSubconfigs(write_context);
+  ASSERT_EQ(rule_num, static_cast<int>(rules.size()));
+}
+
 auto main(int argc, char **argv) -> int {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
