@@ -6,6 +6,7 @@
 
 #include "backend/config_backend_base.h"
 #include "backend/firewall/firewall_context.h"
+#include "frontend/firewall/rule_request.h"
 #include "tools/cplog.h"
 #include "tools/sys.h"
 
@@ -18,6 +19,7 @@
 #include <utility>
 #include <vector>
 
+using std::array;
 using std::function;
 using std::ostringstream;
 using std::shared_ptr;
@@ -35,13 +37,14 @@ public:
   auto apply() -> function<bool()>;
 
   static auto getTableNames() -> vector<string> {
-    static vector<string> tables = {"filter", "nat", "mangle", "raw",
-                                    "security"};
+    static vector<string> tables = {"filter"};
 
     return tables;
   };
 
   auto getSubconfigs(const ctx_t &context) -> vector<string>;
+
+  auto getSubConfigNumber(const ctx_t &context) -> int;
 
   static auto createContext(const ctx_t &current, const string &name) -> ctx_t;
 
@@ -50,6 +53,11 @@ public:
    */
   auto remove(const ctx_t &context) -> bool;
 
+  auto removeRule(const ctx_t &context, int index) -> bool;
+
+  auto addRule(const ctx_t &context, const shared_ptr<RuleRequest> &request)
+      -> bool;
+
 private:
   unordered_map<string, struct iptc_handle *> handles_;
 
@@ -57,22 +65,16 @@ private:
 
   auto getRules(const ctx_t &context) -> vector<const struct ipt_entry *>;
 
+  auto createHandlers() -> bool;
+
+  auto destroyHandlers() -> bool;
+
   /* tool func for iptable rules */
   static auto serializeRule(const struct ipt_entry *rule) -> string;
 
   static auto deserializeRule(const string &rule) -> struct ipt_entry *;
 
   static auto shortSerializeRule(const struct ipt_entry *rule) -> string;
-
-  static auto ip2String(uint32_t ip) -> string;
-
-  static auto iface2String(const char *iface) -> string;
-
-  static auto proto2String(uint8_t proto) -> string;
-
-  static constexpr auto kICMPType = 1;
-  static constexpr auto kTCPType = 6;
-  static constexpr auto kUDPType = 17;
 };
 
 #endif
