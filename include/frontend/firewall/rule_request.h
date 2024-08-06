@@ -4,17 +4,24 @@
 
 #include <optional>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
 using std::optional;
 using std::string;
+using std::tuple;
 using std::vector;
+
+namespace RequestProto {
+const string TCP = "TCP";
+const string UDP = "UDP";
+} // namespace RequestProto
 
 class RuleMatch {
 public:
-  optional<string> src_port_;
-  optional<string> dst_port_;
+  optional<tuple<string, string>> src_port_range_;
+  optional<tuple<string, string>> dst_port_range_;
 };
 
 class RuleRequest {
@@ -26,7 +33,7 @@ public:
   optional<string> src_mask_;
   optional<string> dst_ip_;
   optional<string> dst_mask_;
-  optional<string> proto_;
+  string proto_;
 
   optional<string> iniface_;
   optional<string> outiface_;
@@ -38,10 +45,9 @@ public:
   RuleRequest() = default;
 
   RuleRequest(int index, optional<string> src_ip, optional<string> src_mask,
-              optional<string> dst_ip, optional<string> dst_mask,
-              optional<string> proto, optional<string> iniface,
-              optional<string> outiface, vector<RuleMatch> matches,
-              string target)
+              optional<string> dst_ip, optional<string> dst_mask, string proto,
+              optional<string> iniface, optional<string> outiface,
+              vector<RuleMatch> matches, string target)
       : index_(index), src_ip_(std::move(src_ip)),
         src_mask_(std::move(src_mask)), dst_ip_(std::move(dst_ip)),
         dst_mask_(std::move(dst_mask)), proto_(std::move(proto)),
