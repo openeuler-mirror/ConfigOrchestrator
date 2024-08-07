@@ -107,9 +107,9 @@ auto UIBase::handleHelp() const {
 auto UIBase::handleExit() const -> bool {
   const static string msg = "There are unsaved changes. Do you want to exit?";
   YWidgetFactory *fac = YUI::widgetFactory();
-  YDialog *dialog = fac->createPopupDialog();
+  YDialog *warn_dialog = fac->createPopupDialog();
 
-  YLayoutBox *vbox = fac->createVBox(dialog);
+  YLayoutBox *vbox = fac->createVBox(warn_dialog);
   YAlignment *minSize =
       fac->createMinSize(vbox, kPopDialogMinWidth, kPopDialogMinHeight);
   YLabel *label = fac->createOutputField(minSize, getComponentDescription());
@@ -118,13 +118,15 @@ auto UIBase::handleExit() const -> bool {
   auto *exit_button = fac->createPushButton(vbox, "Exit");
   auto *cancel_button = fac->createPushButton(vbox, "Cancel");
 
-  auto *event = dialog->waitForEvent();
-  while (event->widget() != exit_button && event->widget() != cancel_button) {
-    event = dialog->waitForEvent();
+  auto *event = warn_dialog->waitForEvent();
+  while (event->widget() != exit_button && event->widget() != cancel_button &&
+         event->eventType() != YEvent::CancelEvent) {
+    event = warn_dialog->waitForEvent();
   }
 
-  dialog->destroy();
-  return event->widget() == exit_button;
+  auto res = event->widget() == exit_button;
+  warn_dialog->destroy();
+  return res;
 }
 
 auto UIBase::handleButtons(YEvent *event) -> HandleResult {
@@ -159,9 +161,12 @@ auto UIBase::handleButtons(YEvent *event) -> HandleResult {
     YUIUnImpl("Search Button");
   }
   if (event->widget() == apply_button_) {
-    YUIUnImpl("Apply Button");
-
     auto manager = ConfigManager::instance();
+    if (!manager.apply()) {
+      warnDialog("Failed to apply all changes.");
+    } else {
+      warnDialog("Successfully applied changes.");
+    }
   }
 
   return HandleResult::SUCCESS;
