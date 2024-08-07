@@ -1,19 +1,25 @@
 #ifndef FIREWALL_CONFIG_H
 #define FIREWALL_CONFIG_H
 
+#include "YInputField.h"
+#include "YWidget.h"
 #include "backend/firewall/firewall_backend.h"
 #include "backend/firewall/firewall_context.h"
 #include "frontend/ui_base.h"
 
 #include "YPushButton.h"
 #include <functional>
+#include <linux/netfilter_ipv4/ip_tables.h>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
 using std::function;
+using std::optional;
 using std::shared_ptr;
 using std::string;
+using std::tuple;
 using std::unique_ptr;
 using std::vector;
 
@@ -36,7 +42,7 @@ private:
 
   auto userControlHandle(YEvent *event) -> HandleResult;
 
-  auto createUpdateRule(const ipt_entry *origin) -> shared_ptr<ipt_entry>;
+  auto createUpdateRule(const ipt_entry *origin) -> shared_ptr<RuleRequest>;
 
   auto createChain() -> bool;
 
@@ -59,6 +65,8 @@ private:
   const static string kDelChainButtonText;
   const static string kUpdateRuleDialogTitle;
   const static string kInsertRuleDialogTitle;
+
+  using target_t = tuple<YWidget *, function<bool()>>;
 };
 
 #endif

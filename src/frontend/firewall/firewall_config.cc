@@ -2,6 +2,49 @@
 #include "backend/config_manager.h"
 #include "backend/firewall/firewall_context.h"
 #include "frontend/ui_base.h"
+#include "tools/iptools.h"
+
+#include <arpa/inet.h>
+#include <cstring>
+#include <optional>
+#include <string>
+#include <tuple>
+#include <vector>
+#include <yui/YAlignment.h>
+#include <yui/YButtonBox.h>
+#include <yui/YCheckBox.h>
+#include <yui/YCheckBoxFrame.h>
+#include <yui/YComboBox.h>
+#include <yui/YDialog.h>
+#include <yui/YEmpty.h>
+#include <yui/YEvent.h>
+#include <yui/YFrame.h>
+#include <yui/YImage.h>
+#include <yui/YInputField.h>
+#include <yui/YIntField.h>
+#include <yui/YLabel.h>
+#include <yui/YLayoutBox.h>
+#include <yui/YLogView.h>
+#include <yui/YMenuButton.h>
+#include <yui/YMultiLineEdit.h>
+#include <yui/YMultiSelectionBox.h>
+#include <yui/YPackageSelector.h>
+#include <yui/YProgressBar.h>
+#include <yui/YPushButton.h>
+#include <yui/YRadioButton.h>
+#include <yui/YRadioButtonGroup.h>
+#include <yui/YReplacePoint.h>
+#include <yui/YRichText.h>
+#include <yui/YSelectionBox.h>
+#include <yui/YSpacing.h>
+#include <yui/YSquash.h>
+#include <yui/YTable.h>
+#include <yui/YTableHeader.h>
+#include <yui/YTimeField.h>
+#include <yui/YTree.h>
+#include <yui/YUI.h>
+#include <yui/YWidget.h>
+#include <yui/YWidgetFactory.h>
 
 #include <memory>
 #include <sstream>
@@ -70,7 +113,21 @@ auto FirewallConfig::userControlHandle(YEvent *event) -> HandleResult {
   if (event->widget() == add_chain_button_) {
     createChain();
   } else if (event->widget() == add_rule_button_) {
-    createUpdateRule(nullptr);
+    auto request = createUpdateRule(nullptr);
+    if (request != nullptr) {
+      auto res = firewall_backend_->addRule(firewall_context_, request);
+      if (!res) {
+        stringstream ss;
+        ss << "Failed to add rule.";
+        this->warnDialog(ss.str());
+      } else {
+        stringstream ss;
+        ss << "Rule added: " << request->index_;
+        this->warnDialog(ss.str());
+
+        ConfigManager::instance().registerApplyFunc(firewall_backend_->apply());
+      }
+    }
   } else if (event->widget() == del_chain_button_ ||
              event->widget() == del_rule_button_) {
     auto res = firewall_backend_->remove(firewall_context_);
@@ -123,31 +180,216 @@ auto FirewallConfig::getComponentName() const -> string {
   return getName();
 }
 
-auto FirewallConfig::createUpdateRule(const ipt_entry *origin)
-    -> shared_ptr<ipt_entry> {
+auto FirewallConfig::createUpdateRule(const ipt_entry *origin) // NOLINT
+    -> shared_ptr<RuleRequest> {
+  static constexpr int button_space = 5;
+
   auto *fac = getFactory();
   YDialog *dialog = fac->createPopupDialog();
 
+  auto request = std::make_shared<RuleRequest>();
+  request->matches_.emplace_back(RuleMatch());
+
   YLayoutBox *vbox = fac->createVBox(dialog);
 
-  if (origin == nullptr) { // add new rule
-    fac->createLabel(vbox, kInsertRuleDialogTitle);
-  } else { // update exist rule
-    fac->createLabel(vbox, kUpdateRuleDialogTitle);
+  if (origin == nullptr) {
+    auto *title = fac->createLabel(vbox, kInsertRuleDialogTitle);
+    title->autoWrap();
+  } else {
+    auto *title = fac->createLabel(vbox, kUpdateRuleDialogTitle);
+    title->autoWrap();
   }
-  auto *ok = fac->createPushButton(vbox, "OK");
-  auto *cancel = fac->createPushButton(vbox, "Cancel");
 
-  auto *event = dialog->waitForEvent();
-  if (event->widget() == ok) {
-    auto entry = std::make_shared<ipt_entry>();
+  vector<target_t> widget_targets;
+  {
+    /* Line 1: position, protocol and target */
+    auto *hbox = fac->createHBox(vbox);
+    auto rule_num = static_cast<int>(
+        firewall_backend_->getSubconfigs(firewall_context_).size());
 
-    return entry;
+    auto text = "Rule position (1-" + std::to_string(rule_num + 1) + ")";
+    auto *pos_input = fac->createIntField(hbox, text, 1, rule_num + 1, 1);
+    widget_targets.emplace_back(pos_input, [pos_input, &request]() {
+      auto *widget = dynamic_cast<YIntField *>(pos_input);
+      request->index_ = widget->value();
+      return true;
+    });
+
+    auto ptcs = protocols();
+    YComboBox *proto_box = fac->createComboBox(hbox, "Protocol");
+    YItemCollection items;
+    for (const auto &ptc : ptcs) {
+      items.push_back(new YItem(get<0>(ptc)));
+    }
+    proto_box->addItems(items);
+    widget_targets.emplace_back(proto_box, [proto_box, &request]() {
+      auto *widget = dynamic_cast<YComboBox *>(proto_box);
+      auto *item = widget->selectedItem();
+
+      auto value = item->label();
+      request->proto_ = value;
+      return true;
+    });
+
+    auto iptables_targets = iptTargets();
+    YComboBox *target_box = fac->createComboBox(hbox, "Target");
+    YItemCollection target_items;
+    for (const auto &target : iptables_targets) {
+      target_items.push_back(new YItem(target));
+    }
+    target_box->addItems(target_items);
+    widget_targets.emplace_back(target_box, [target_box, &request]() {
+      auto *widget = dynamic_cast<YComboBox *>(target_box);
+      auto *item = widget->selectedItem();
+
+      auto value = item->label();
+      request->target_ = value;
+      return true;
+    });
+  }
+
+  /* Line 2/3: source/dest addr and mask */
+  constexpr int kIPMaxLen = 15;
+  auto ip_input = [&](const string &target, optional<string> &addr_target,
+                      optional<string> &mask_target) {
+    auto *frame = YUI::widgetFactory()->createCheckBoxFrame(
+        vbox, target + " Address / Mask", false);
+
+    {
+      auto *hbox = fac->createHBox(frame);
+      auto *addr = fac->createInputField(hbox, target + " Address");
+      addr->setInputMaxLength(kIPMaxLen);
+
+      auto *mask = fac->createInputField(hbox, target + " Mask");
+      mask->setInputMaxLength(kIPMaxLen);
+      mask->setValue("255.255.255.255");
+
+      widget_targets.emplace_back(
+          frame, [frame, addr, mask, &addr_target, &mask_target]() {
+            auto *widget = dynamic_cast<YCheckBoxFrame *>(frame);
+            if (widget->isEnabled()) {
+              auto *addr_widget = dynamic_cast<YInputField *>(addr);
+              addr_target = addr_widget->value();
+
+              auto *mask_widget = dynamic_cast<YInputField *>(mask);
+              mask_target = mask_widget->value();
+            }
+            return true;
+          });
+    }
+  };
+
+  ip_input("Source", request->src_ip_, request->src_mask_);
+  ip_input("Dest", request->dst_ip_, request->dst_mask_);
+
+  /* Line 4/5: iniface and outiface */
+  {
+    auto *frame =
+        YUI::widgetFactory()->createCheckBoxFrame(vbox, "Iniface", false);
+    auto *iface = fac->createInputField(frame, "");
+
+    widget_targets.emplace_back(frame, [frame, iface, &request]() {
+      auto *widget = dynamic_cast<YCheckBoxFrame *>(frame);
+      if (widget->isEnabled()) {
+        auto *iface_widget = dynamic_cast<YInputField *>(iface);
+        request->iniface_ = iface_widget->value();
+      }
+      return true;
+    });
+  }
+  {
+    auto *frame =
+        YUI::widgetFactory()->createCheckBoxFrame(vbox, "Outiface", false);
+    auto *iface = fac->createInputField(frame, "");
+
+    widget_targets.emplace_back(frame, [frame, iface, &request]() {
+      auto *widget = dynamic_cast<YCheckBoxFrame *>(frame);
+      if (widget->isEnabled()) {
+        auto *iface_widget = dynamic_cast<YInputField *>(iface);
+        request->outiface_ = iface_widget->value();
+      }
+      return true;
+    });
+  }
+
+  {
+    constexpr int kPortMax = 65535;
+    constexpr int kPortMin = 1;
+
+    auto port_input = [&](const string &target,
+                          optional<tuple<string, string>> &port_target) {
+      auto *frame = YUI::widgetFactory()->createCheckBoxFrame(
+          vbox, target + " Port", false);
+
+      auto *hbox = fac->createHBox(frame);
+      auto *from = fac->createIntField(hbox, target + " from", kPortMin,
+                                       kPortMax, kPortMin);
+      auto *to = fac->createIntField(hbox, target + " to", kPortMin, kPortMax,
+                                     kPortMax);
+
+      widget_targets.emplace_back(frame, [frame, from, to, &port_target,
+                                          &request]() {
+        auto *widget = dynamic_cast<YCheckBoxFrame *>(frame);
+        if (widget->isEnabled()) {
+          auto *to_widget = dynamic_cast<YIntField *>(to);
+          auto *from_widget = dynamic_cast<YIntField *>(from);
+
+          if (to_widget->value() < from_widget->value()) {
+            return false;
+          }
+
+          port_target = std::make_tuple("", "");
+          get<0>(port_target.value()) = std::to_string(from_widget->value());
+          get<1>(port_target.value()) = std::to_string(to_widget->value());
+        }
+        return true;
+      });
+    };
+
+    port_input("Source", request->matches_.front().src_port_range_);
+    port_input("Dest", request->matches_.front().dst_port_range_);
+  }
+
+  auto *control_layout = fac->createHBox(vbox);
+  auto *ok = fac->createPushButton(control_layout, "&OK");
+  fac->createHSpacing(control_layout, button_space);
+  auto *cancel = fac->createPushButton(control_layout, "&Cancel");
+
+  while (true) {
+    auto *event = dialog->waitForEvent();
+    if (event->widget() == ok) {
+      bool r = true;
+      for (const auto &[_, func] : widget_targets) {
+        r &= func();
+        if (!r) {
+          static const string kInvalidInput = "Invalid input.";
+          this->warnDialog(kInvalidInput);
+          break;
+        }
+      }
+
+      if (r) {
+        // special case for port range
+        if (!request->matches_.front().src_port_range_.has_value() &&
+            !request->matches_.front().dst_port_range_.has_value()) {
+          request->matches_.clear();
+        }
+        dialog->destroy();
+        return request;
+      }
+    }
+
+    if (event->widget() == cancel ||
+        event->eventType() == YEvent::CancelEvent) {
+      dialog->destroy();
+      return nullptr;
+    }
   }
 
   dialog->destroy();
   return nullptr;
 }
+
 auto FirewallConfig::createChain() -> bool {
   (void)firewall_backend_;
 
