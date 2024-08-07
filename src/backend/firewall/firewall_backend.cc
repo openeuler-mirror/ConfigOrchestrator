@@ -1,6 +1,7 @@
 #include "backend/firewall/firewall_backend.h"
 #include "tools/iptools.h"
 
+#include <algorithm>
 #include <arpa/inet.h>
 #include <asm-generic/int-ll64.h>
 #include <bits/ranges_algo.h>
@@ -282,11 +283,12 @@ auto FirewallBackend::addRule(const ctx_t &context,
 
   /* Part III: target */
   target_entry->u.user.target_size = kIPTEntryTargetSize;
-  if (request->target.empty() || request->target == IPTC_LABEL_ACCEPT ||
-      request->target == IPTC_LABEL_DROP ||
-      request->target == IPTC_LABEL_QUEUE ||
-      request->target == IPTC_LABEL_RETURN) {
-    strncpy(target_entry->u.user.name, request->target.c_str(),
+  if (request->target_.empty() ||
+      std::any_of(iptTargets().begin(), iptTargets().end(),
+                  [&request](const auto &target) {
+                    return target == request->target_;
+                  })) {
+    strncpy(target_entry->u.user.name, request->target_.c_str(),
             sizeof(target_entry->u.user.name));
   }
 
