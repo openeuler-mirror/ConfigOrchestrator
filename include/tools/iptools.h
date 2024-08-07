@@ -21,4 +21,6 @@ auto proto2String(uint8_t proto) -> string;
 
 auto string2Proto(string proto) -> uint8_t;
 
+auto iptTargets() -> vector<string>;
+
 #endif

@@ -1,5 +1,6 @@
 #include "tools/iptools.h"
 #include <arpa/inet.h>
+#include <libiptc/libiptc.h>
 
 auto ip2Tuple(uint32_t ip) -> std::tuple<uint8_t, uint8_t, uint8_t, uint8_t> {
   constexpr uint8_t mask = 0xFF;
@@ -49,4 +50,10 @@ auto string2Proto(const string &proto) -> uint8_t {
   }
 
   return 0;
+}
+
+auto iptTargets() -> vector<string> {
+  static vector<string> r = {IPTC_LABEL_ACCEPT, IPTC_LABEL_DROP,
+                             IPTC_LABEL_QUEUE, IPTC_LABEL_RETURN};
+  return r;
 }
