@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include <libiptc/libiptc.h>
+
 using std::optional;
 using std::string;
 using std::tuple;
@@ -27,7 +29,7 @@ public:
 class RuleRequest {
 public:
   /* rule index in new rule list */
-  int index_;
+  int index_{1};
 
   optional<string> src_ip_;
   optional<string> src_mask_;
@@ -40,9 +42,9 @@ public:
 
   vector<RuleMatch> matches_;
 
-  string target;
+  string target_;
 
-  RuleRequest() = default;
+  RuleRequest() : proto_(RequestProto::TCP), target_(IPTC_LABEL_ACCEPT){};
 
   RuleRequest(int index, optional<string> src_ip, optional<string> src_mask,
               optional<string> dst_ip, optional<string> dst_mask, string proto,
@@ -52,7 +54,7 @@ public:
         src_mask_(std::move(src_mask)), dst_ip_(std::move(dst_ip)),
         dst_mask_(std::move(dst_mask)), proto_(std::move(proto)),
         iniface_(std::move(iniface)), outiface_(std::move(outiface)),
-        matches_(std::move(matches)), target(std::move(target)) {}
+        matches_(std::move(matches)), target_(std::move(target)) {}
 };
 
 #endif
