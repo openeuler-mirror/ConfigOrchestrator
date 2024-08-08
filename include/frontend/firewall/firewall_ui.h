@@ -48,7 +48,7 @@ private:
 
   shared_ptr<FirewallContext> firewall_context_;
   shared_ptr<FirewallBackend> firewall_backend_;
-  vector<target_t> widgets_targets_;
+  vector<widget_func_t> widgets_targets_;
 
   vector<string> iptable_children;
 
