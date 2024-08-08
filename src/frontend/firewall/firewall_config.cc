@@ -2,6 +2,7 @@
 #include "backend/config_manager.h"
 #include "backend/firewall/firewall_context.h"
 #include "controlpanel.h"
+#include "frontend/package_manager/package_config.h"
 #include "frontend/ui_base.h"
 #include "tools/iptools.h"
 
@@ -130,12 +131,13 @@ auto FirewallConfig::fresh(YDialog *main_dialog, DisplayLayout layout) // NOLINT
 
       widgets_targets_.emplace_back(del_button, [this, iptable_child, index,
                                                  main_dialog, layout]() {
-        auto res = firewall_backend_->removeRule(firewall_context_, index + 1);
+        auto res = firewall_backend_->removeRule(firewall_context_, index);
 
         stringstream ss;
         if (!res) {
           ss << "Failed to remove chain: " << firewall_context_->serialize()
-             << ", Rule #" << index << ". Rule Brief: " << iptable_child;
+             << ", Rule #" << index << ". Rule Brief: " << iptable_child << endl
+             << "Error: " << firewall_context_->getLastError();
           this->warnDialog(ss.str());
         } else {
           ss << "Chain removed: " << firewall_context_->serialize()

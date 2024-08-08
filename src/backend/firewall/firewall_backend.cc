@@ -170,6 +170,7 @@ auto FirewallBackend::removeRule(const ctx_t &context, int index) -> bool {
 
   if (iptc_delete_num_entry(chain.c_str(), index, handle) == 0) {
     yuiError() << "Error deleting rule: " << iptc_strerror(errno) << endl;
+    context->setLastError(iptc_strerror(errno));
     return false;
   }
 
