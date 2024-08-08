@@ -45,7 +45,7 @@ public:
 
   auto getSubconfigs(const ctx_t &context) -> vector<string>;
 
-  auto getSubConfigNumber(const ctx_t &context) -> int;
+  auto getDetailedRule(const ctx_t &context, int index) -> string;
 
   static auto createContext(const ctx_t &current, const string &name) -> ctx_t;
 
@@ -76,7 +76,7 @@ private:
   /* tool func for iptable rules */
   static auto serializeRule(const struct ipt_entry *rule) -> string;
 
-  static auto shortSerializeRule(const struct ipt_entry *rule) -> string;
+  static auto serializeShortRule(const struct ipt_entry *rule) -> string;
 };
 
 #endif

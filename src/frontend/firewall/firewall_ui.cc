@@ -4,6 +4,7 @@
 #include "controlpanel.h"
 #include "frontend/ui_base.h"
 #include "tools/iptools.h"
+#include "tools/uitools.h"
 
 #include <arpa/inet.h>
 #include <cstring>
@@ -124,9 +125,18 @@ auto FirewallConfig::fresh(YDialog *main_dialog, DisplayLayout layout) // NOLINT
 
       fac->createLabel(hbox, iptable_child);
       fac->createHSpacing(hbox, 2);
+      auto *detail_button = fac->createPushButton(hbox, "Detail");
+      fac->createHSpacing(hbox, 2);
       auto *del_button = fac->createPushButton(hbox, "Delete");
       fac->createHSpacing(hbox, 2);
       auto *update_button = fac->createPushButton(hbox, "Update");
+
+      widgets_targets_.emplace_back(detail_button, [this, index]() {
+        auto title = fmt::format("Rule Detail: #{}", index);
+        showDialog(title, firewall_backend_->getDetailedRule(firewall_context_,
+                                                             index));
+        return true;
+      });
 
       widgets_targets_.emplace_back(del_button, [this, iptable_child, index,
                                                  main_dialog, layout]() {

@@ -1,5 +1,6 @@
 #include "backend/firewall/firewall_backend.h"
 #include "tools/iptools.h"
+#include "tools/log.h"
 
 #include <algorithm>
 #include <arpa/inet.h>
@@ -91,12 +92,25 @@ auto FirewallBackend::getSubconfigs(const shared_ptr<FirewallContext> &context)
   case FirewallLevel::CHAIN:
     auto rules = getRules(context);
     for (const auto &rule : rules) {
-      subconfigs.emplace_back(shortSerializeRule(rule));
+      subconfigs.emplace_back(serializeShortRule(rule));
     }
     break;
   }
 
   return subconfigs;
+}
+
+auto FirewallBackend::getDetailedRule(const ctx_t &context,
+                                      int index) -> string {
+  auto *handle = handles_.at(context->table_);
+  auto chain = context->chain_;
+  const auto *rule = iptc_first_rule(chain.c_str(), handle);
+
+  for (int i = 0; i < index; i++) {
+    rule = iptc_next_rule(rule, handle);
+  }
+
+  return serializeRule(rule);
 }
 
 auto FirewallBackend::createContext(const ctx_t &current,
@@ -307,56 +321,6 @@ auto FirewallBackend::addRule(const ctx_t &context,
   return true;
 }
 
-auto FirewallBackend::serializeRule(const struct ipt_entry *rule) -> string {
-  ostringstream ss;
-
-  ss << "Source IP: " << string(inet_ntoa(rule->ip.src)) << "\n";
-  ss << "Destination IP: " << string(inet_ntoa(rule->ip.dst)) << "\n";
-  ss << "Source Mask: " << string(inet_ntoa(rule->ip.smsk)) << "\n";
-  ss << "Destination Mask: " << string(inet_ntoa(rule->ip.dmsk)) << "\n";
-  ss << "Protocol: " << proto2String(rule->ip.proto) << "\n";
-  ss << "Flags: " << static_cast<int>(rule->ip.flags) << "\n";
-  ss << "Inverse Flags: " << static_cast<int>(rule->ip.invflags) << "\n";
-  ss << "Input Interface: " << string(rule->ip.iniface) << "\n";
-  ss << "Output Interface: " << string(rule->ip.outiface) << "\n";
-  ss << "Nf Cache: " << rule->nfcache << "\n";
-  ss << "Target Offset: " << rule->target_offset << "\n";
-  ss << "Next Offset: " << rule->next_offset << "\n";
-  ss << "Come From: " << rule->comefrom << "\n";
-  ss << "Packet Count: " << rule->counters.pcnt << "\n";
-  ss << "Byte Count: " << rule->counters.bcnt << "\n";
-
-  const auto *match = reinterpret_cast<const ipt_entry_match *>(rule->elems);
-  while (reinterpret_cast<const char *>(match) !=
-         reinterpret_cast<const char *>(rule) + rule->target_offset) {
-    ss << "Match Name: " << match->u.user.name << "\n";
-    ss << "Match Size: " << match->u.match_size << "\n";
-
-    if (rule->ip.proto == IPPROTO_TCP) {
-      const auto *tcp = reinterpret_cast<const ipt_tcp *>(match->data);
-      ss << "Source Port: " << tcp->spts[0] << " - " << tcp->spts[1] << "\n";
-      ss << "Destination Port: " << tcp->dpts[0] << " - " << tcp->dpts[1]
-         << "\n";
-    } else if (rule->ip.proto == IPPROTO_UDP) {
-      const auto *udp = reinterpret_cast<const ipt_udp *>(match->data);
-      ss << "Source Port: " << udp->spts[0] << " - " << udp->spts[1] << "\n";
-      ss << "Destination Port: " << udp->dpts[0] << " - " << udp->dpts[1]
-         << "\n";
-    }
-
-    match = reinterpret_cast<const ipt_entry_match *>(
-        reinterpret_cast<const char *>(match) + match->u.match_size);
-  }
-
-  if (rule->target_offset != rule->next_offset) {
-    const auto *target = reinterpret_cast<const ipt_entry_target *>(
-        reinterpret_cast<const char *>(rule) + rule->target_offset);
-    ss << "Target Name: " << target->u.user.name << "\n";
-    ss << "Target Size: " << target->u.user.target_size << "\n";
-  }
-  return ss.str();
-}
-
 auto FirewallBackend::addChain(
     const ctx_t &context, const shared_ptr<ChainRequest> &request) -> bool {
   auto *handle = handles_.at(context->table_);
@@ -371,15 +335,91 @@ auto FirewallBackend::addChain(
   return true;
 }
 
-auto FirewallBackend::shortSerializeRule(const struct ipt_entry *rule)
+auto FirewallBackend::serializeRule(const struct ipt_entry *rule) -> string {
+  std::string result;
+
+  result += fmt::format("Source IP: {}\n", inet_ntoa(rule->ip.src));
+  result += fmt::format("Destination IP: {}\n", inet_ntoa(rule->ip.dst));
+  result += fmt::format("Source Mask: {}\n", inet_ntoa(rule->ip.smsk));
+  result += fmt::format("Destination Mask: {}\n", inet_ntoa(rule->ip.dmsk));
+  result += fmt::format("Protocol: {}\n", proto2String(rule->ip.proto));
+  result += fmt::format("Flags: {}\n", rule->ip.flags);
+  result += fmt::format("Inverse Flags: {}\n", rule->ip.invflags);
+  result += fmt::format("Input Interface: {}\n", rule->ip.iniface);
+  result += fmt::format("Output Interface: {}\n", rule->ip.outiface);
+  result += fmt::format("Nf Cache: {}\n", rule->nfcache);
+  result += fmt::format("Come From: {}\n", rule->comefrom);
+  result += fmt::format("Packet Count: {}\n", rule->counters.pcnt);
+  result += fmt::format("Byte Count: {}\n", rule->counters.bcnt);
+
+  const auto *match = reinterpret_cast<const ipt_entry_match *>(rule->elems);
+  while (reinterpret_cast<const char *>(match) !=
+         reinterpret_cast<const char *>(rule) + rule->target_offset) {
+    result += fmt::format("Match Name: {}\n", match->u.user.name);
+    result += fmt::format("Match Size: {}\n", match->u.match_size);
+
+    if (rule->ip.proto == IPPROTO_TCP) {
+      const auto *tcp = reinterpret_cast<const ipt_tcp *>(match->data);
+      result += fmt::format("Src Port: {} - {}\n", tcp->spts[0], tcp->spts[1]);
+      result += fmt::format("Dest Port: {} - {}\n", tcp->dpts[0], tcp->dpts[1]);
+    } else if (rule->ip.proto == IPPROTO_UDP) {
+      const auto *udp = reinterpret_cast<const ipt_udp *>(match->data);
+      result += fmt::format("Src Port: {} - {}\n", udp->spts[0], udp->spts[1]);
+      result += fmt::format("Dest Port: {} - {}\n", udp->dpts[0], udp->dpts[1]);
+    }
+
+    match = reinterpret_cast<const ipt_entry_match *>(
+        reinterpret_cast<const char *>(match) + match->u.match_size);
+  }
+
+  if (rule->target_offset != rule->next_offset) {
+    const auto *target = reinterpret_cast<const ipt_entry_target *>(
+        reinterpret_cast<const char *>(rule) + rule->target_offset);
+    result += fmt::format("Target Name: {}\n", target->u.user.name);
+    result += fmt::format("Target Size: {}\n", target->u.user.target_size);
+  }
+
+  return result;
+}
+
+auto FirewallBackend::serializeShortRule(const struct ipt_entry *rule)
     -> string {
-  ostringstream ss;
+  std::string result;
+  result += fmt::format("SRC: {}, DST: {}, PROTO: {}", inet_ntoa(rule->ip.src),
+                        inet_ntoa(rule->ip.dst), proto2String(rule->ip.proto));
 
-  ss << "SRC: " << string(inet_ntoa(rule->ip.src)) << "/"
-     << string(inet_ntoa(rule->ip.smsk))
-     << ", DST: " << string(inet_ntoa(rule->ip.dst)) << "/"
-     << string(inet_ntoa(rule->ip.dmsk))
-     << " | PROTO: " << proto2String(rule->ip.proto);
+  static constexpr int kMinPort = 0;
+  static constexpr int kMaxPort = 65535;
+  const auto *match = reinterpret_cast<const ipt_entry_match *>(rule->elems);
+  while (reinterpret_cast<const char *>(match) !=
+         reinterpret_cast<const char *>(rule) + rule->target_offset) {
+    auto srcs = std::make_pair(kMinPort, kMaxPort);
+    auto dsts = std::make_pair(kMinPort, kMaxPort);
+    if (rule->ip.proto == IPPROTO_TCP) {
+      const auto *tcp = reinterpret_cast<const ipt_tcp *>(match->data);
+      srcs = std::make_pair(tcp->spts[0], tcp->spts[1]);
+      dsts = std::make_pair(tcp->dpts[0], tcp->dpts[1]);
+    } else if (rule->ip.proto == IPPROTO_UDP) {
+      const auto *udp = reinterpret_cast<const ipt_udp *>(match->data);
+      srcs = std::make_pair(udp->spts[0], udp->spts[1]);
+      dsts = std::make_pair(udp->dpts[0], udp->dpts[1]);
+    }
+    if (srcs.first != kMinPort && srcs.second != kMaxPort) {
+      result += fmt::format(", SRC PORT: {}-{}", srcs.first, srcs.second);
+    }
+    if (dsts.first != kMinPort && dsts.second != kMaxPort) {
+      result += fmt::format(", DST PORT: {}-{}", dsts.first, dsts.second);
+    }
 
-  return ss.str();
+    if (rule->target_offset != rule->next_offset) {
+      const auto *target = reinterpret_cast<const ipt_entry_target *>(
+          reinterpret_cast<const char *>(rule) + rule->target_offset);
+      result += fmt::format(" | {}\n", target->u.user.name);
+    }
+
+    match = reinterpret_cast<const ipt_entry_match *>(
+        reinterpret_cast<const char *>(match) + match->u.match_size);
+  }
+
+  return result;
 }
