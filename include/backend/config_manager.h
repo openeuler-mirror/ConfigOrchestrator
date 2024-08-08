@@ -4,6 +4,7 @@
 
 #include "backend/config_backend_base.h"
 #include "frontend/ui_base.h"
+#include "tools/cplog.h"
 
 #include <atomic>
 #include <functional>
@@ -26,8 +27,8 @@ public:
   using initializer = function<shared_ptr<ConfigBackendBase>(void)>;
 
   static auto instance() -> ConfigManager & {
-    static ConfigManager instance;
-    return instance;
+    static ConfigManager config_manager;
+    return config_manager;
   }
 
   template <typename BackendType>
@@ -50,15 +51,19 @@ public:
 
   auto hasUnsavedConfig() -> bool { return !unsavedConfigs_.empty(); }
 
+  auto registerApplyFunc(const function<bool(void)> &) -> int;
+
+  auto apply() -> bool;
+
 private:
   vector<function<bool(void)>> unsavedConfigs_;
 
   // backend manager
   unordered_map<string, shared_ptr<ConfigBackendBase>> backends;
 
-  ConfigManager() = default;
-
   static auto getInitializers(const string &type) -> optional<initializer>;
+
+  ConfigManager() = default;
 };
 
 #endif // CONFIG_MANAGER_H_

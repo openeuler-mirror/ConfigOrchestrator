@@ -18,3 +18,18 @@ auto ConfigManager::getInitializers(const string &type)
   }
   return nullopt;
 }
+
+auto ConfigManager::registerApplyFunc(const function<bool(void)> &func) -> int {
+  unsavedConfigs_.emplace_back(func);
+  return static_cast<int>(unsavedConfigs_.size() - 1);
+}
+
+auto ConfigManager::apply() -> bool {
+  auto res = true;
+  for (const auto &func : unsavedConfigs_) {
+    res &= func();
+  }
+
+  unsavedConfigs_.clear();
+  return res;
+}

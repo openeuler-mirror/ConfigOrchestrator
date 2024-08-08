@@ -132,10 +132,8 @@ auto UIBase::handleExit() const -> bool {
 auto UIBase::handleButtons(YEvent *event) -> HandleResult {
   if (event->widget() == close_button_ ||
       event->eventType() == YEvent::CancelEvent) {
-    auto manager = ConfigManager::instance();
-
     auto real_exit = true;
-    if (manager.hasUnsavedConfig()) {
+    if (ConfigManager::instance().hasUnsavedConfig()) {
       real_exit = handleExit();
     }
 
@@ -161,8 +159,7 @@ auto UIBase::handleButtons(YEvent *event) -> HandleResult {
     YUIUnImpl("Search Button");
   }
   if (event->widget() == apply_button_) {
-    auto manager = ConfigManager::instance();
-    if (!manager.apply()) {
+    if (!ConfigManager::instance().apply()) {
       warnDialog("Failed to apply all changes.");
     } else {
       warnDialog("Successfully applied changes.");
