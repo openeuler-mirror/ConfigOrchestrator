@@ -11,7 +11,8 @@ Checks: >
   misc-unused-parameters,
   -performance-avoid-endl,
   -readability-identifier-length,
-  -bugprone-unchecked-optional-access
+  -bugprone-unchecked-optional-access,
+  -bugprone-easily-swappable-parameters
 WarningsAsErrors: "*"
 HeaderFilterRegex: ""
 FormatStyle: none

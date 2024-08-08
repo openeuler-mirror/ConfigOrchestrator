@@ -49,7 +49,7 @@ public:
 class UIBase : public std::enable_shared_from_this<UIBase> {
 public:
   UIBase(string name, const shared_ptr<UIBase> &parent)
-      : name_(std::move(name)), parent_(parent), main_dialog_(nullptr) {
+      : name_(std::move(name)), parent_(parent) {
     factory_ = YUI::widgetFactory();
   }
 
@@ -89,7 +89,7 @@ private:
   weak_ptr<UIBase> parent_;
 
   YWidgetFactory *factory_;
-  YDialog *main_dialog_;
+  YDialog *main_dialog_{};
   YLayoutBox *main_layout_;
 
   YLayoutBox *upper_layout_;

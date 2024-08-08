@@ -8,7 +8,7 @@
 #include "backend/firewall/firewall_context.h"
 #include "frontend/firewall/chain_request.h"
 #include "frontend/firewall/rule_request.h"
-#include "tools/cplog.h"
+#include "tools/log.h"
 #include "tools/sys.h"
 
 #include <bits/ranges_algo.h>

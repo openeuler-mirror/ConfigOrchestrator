@@ -21,10 +21,10 @@ public:
         chain_(context->chain_) {}
 
   FirewallLevel level_{};
-  string table_{};
-  string chain_{};
+  string table_;
+  string chain_;
 
-  string last_error_{};
+  string last_error_;
 
   [[nodiscard]] auto serialize() const -> string {
     string serialized = "Firewall Config";

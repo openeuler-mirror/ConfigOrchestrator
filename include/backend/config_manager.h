@@ -4,7 +4,7 @@
 
 #include "backend/config_backend_base.h"
 #include "frontend/ui_base.h"
-#include "tools/cplog.h"
+#include "tools/log.h"
 
 #include <atomic>
 #include <functional>

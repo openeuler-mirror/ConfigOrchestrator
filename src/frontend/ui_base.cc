@@ -6,7 +6,7 @@
 #include "backend/config_manager.h"
 #include "controlpanel.h"
 #include "frontend/ui_base.h"
-#include "tools/cplog.h"
+#include "tools/log.h"
 #include "tools/uitools.h"
 
 #include <cassert>

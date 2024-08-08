@@ -7,7 +7,7 @@
 
 #include "backend/firewall/firewall_backend.h"
 #include "backend/firewall/firewall_context.h"
-#include "tools/cplog.h"
+#include "tools/log.h"
 
 using std::cout;
 using std::endl;

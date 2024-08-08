@@ -22,7 +22,7 @@ public:
 
   ChainRequest(string chain_) : chain_name_(std::move(chain_)) {}
 
-  string chain_name_{};
+  string chain_name_;
 };
 
 #endif
