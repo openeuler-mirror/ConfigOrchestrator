@@ -2,6 +2,7 @@
 #define ui_base_H
 
 #include "controlpanel.h"
+#include "tools/uitools.h"
 
 #include <cstdint>
 #include <functional>
@@ -69,8 +70,6 @@ public:
 
   [[nodiscard]] auto getFactory() const -> YWidgetFactory *;
 
-  auto showWarningDialog(const string &msg) -> void;
-
   /**
    * @brief Get the page desc, shown in help dialog
    */
@@ -109,8 +108,6 @@ private:
   static constexpr YLayoutSize_t kHboxVertMinSize = 1;
   static constexpr YLayoutSize_t kHSpaceLength = 2;
   static constexpr YLayoutSize_t kVSpaceSize = 1;
-  static constexpr YLayoutSize_t kPopDialogMinWidth = 60;
-  static constexpr YLayoutSize_t kPopDialogMinHeight = 10;
 
   static const string kSoftwareName;
   static const string kBackButtonName;
@@ -118,7 +115,6 @@ private:
   static const string kCloseButtonName;
   static const string kApplyButtonName;
   static const string kHelpButtonName;
-  static const string kWarnDialogTitle;
 
   virtual auto userDisplay(YDialog *main_dialog, DisplayLayout layout)
       -> DisplayResult = 0;

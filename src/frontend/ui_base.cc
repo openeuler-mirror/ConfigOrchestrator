@@ -6,6 +6,7 @@
 #include "backend/config_manager.h"
 #include "frontend/ui_base.h"
 #include "tools/cplog.h"
+#include "tools/uitools.h"
 
 #include <cassert>
 #include <cstdlib>
@@ -20,7 +21,6 @@ const string UIBase::kSearchButtonName = "&Search";
 const string UIBase::kCloseButtonName = "&Close";
 const string UIBase::kApplyButtonName = "&Apply";
 const string UIBase::kHelpButtonName = "&Help";
-const string UIBase::kWarnDialogTitle = "Warning";
 
 auto UIBase::display() -> void {
   main_dialog_ = factory_->createDialog(YDialogType::YMainDialog);
@@ -89,29 +89,14 @@ auto UIBase::display() -> void {
   userDisplay(main_dialog_, {feature_layout_, user_control_layout_});
 }
 
-auto UIBase::handleHelp() const {
-  YWidgetFactory *fac = YUI::widgetFactory();
-  YDialog *dialog = fac->createPopupDialog();
-
-  YLayoutBox *vbox = fac->createVBox(dialog);
-  YAlignment *minSize =
-      fac->createMinSize(vbox, kPopDialogMinWidth, kPopDialogMinHeight);
-  YLabel *label = fac->createOutputField(minSize, getPageDescription());
-  label->setAutoWrap();
-
-  fac->createPushButton(vbox, "OK");
-  dialog->waitForEvent();
-  dialog->destroy();
-}
-
 auto UIBase::handleExit() const -> bool {
   const static string msg = "There are unsaved changes. Do you want to exit?";
   YWidgetFactory *fac = YUI::widgetFactory();
   YDialog *warn_dialog = fac->createPopupDialog();
 
   YLayoutBox *vbox = fac->createVBox(warn_dialog);
-  YAlignment *minSize =
-      fac->createMinSize(vbox, kPopDialogMinWidth, kPopDialogMinHeight);
+  YAlignment *minSize = fac->createMinSize(
+      vbox, dialog_meta::kPopDialogMinWidth, dialog_meta::kPopDialogMinHeight);
   YLabel *label = fac->createOutputField(minSize, getPageDescription());
   label->setAutoWrap();
 
@@ -144,7 +129,7 @@ auto UIBase::handleButtons(YEvent *event) -> HandleResult {
   }
 
   if (event->widget() == help_button_) {
-    handleHelp();
+    showDialog(dialog_meta::HELP, getPageDescription());
   }
 
   if (event->widget() == back_button_) {
@@ -160,9 +145,9 @@ auto UIBase::handleButtons(YEvent *event) -> HandleResult {
   }
   if (event->widget() == apply_button_) {
     if (!ConfigManager::instance().apply()) {
-      showWarningDialog("Failed to apply all changes.");
+      showDialog(dialog_meta::ERROR, "Failed to apply all changes.");
     } else {
-      showWarningDialog("Successfully applied changes.");
+      showDialog(dialog_meta::INFO, "Successfully applied changes.");
     }
   }
 
@@ -206,23 +191,5 @@ auto UIBase::handleEvent() -> void {
 }
 
 auto UIBase::isMainMenu() -> bool { return parent_.expired(); }
-
-auto UIBase::showWarningDialog(const string &warning) -> void {
-  YDialog *dialog = factory_->createPopupDialog();
-
-  YLayoutBox *vbox = factory_->createVBox(dialog);
-  factory_->createLabel(vbox, kWarnDialogTitle);
-  factory_->createVSpacing(vbox, kVSpaceSize);
-
-  YAlignment *minSize =
-      factory_->createMinSize(vbox, kPopDialogMinWidth, kPopDialogMinHeight);
-  YLabel *label = factory_->createOutputField(minSize, warning);
-  label->setAutoWrap();
-
-  factory_->createPushButton(vbox, "OK");
-  dialog->waitForEvent();
-
-  dialog->destroy();
-}
 
 auto UIBase::getName() const -> string { return name_; }
