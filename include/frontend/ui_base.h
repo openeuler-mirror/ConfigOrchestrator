@@ -46,7 +46,7 @@ public:
 class UIBase : public std::enable_shared_from_this<UIBase> {
 public:
   UIBase(string name, const shared_ptr<UIBase> &parent)
-      : name_(move(name)), parent_(parent), main_dialog_(nullptr) {
+      : name_(std::move(name)), parent_(parent), main_dialog_(nullptr) {
     factory_ = YUI::widgetFactory();
   }
 
