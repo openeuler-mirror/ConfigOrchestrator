@@ -1,8 +1,7 @@
-#include "frontend/firewall/firewall_config.h"
+#include "frontend/firewall/firewall_ui.h"
 #include "backend/config_manager.h"
 #include "backend/firewall/firewall_context.h"
 #include "controlpanel.h"
-#include "frontend/package_manager/package_config.h"
 #include "frontend/ui_base.h"
 #include "tools/iptools.h"
 

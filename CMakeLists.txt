@@ -2,13 +2,25 @@ cmake_minimum_required(VERSION 3.17)
 project(controlpanel)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS on)
-set(CMAKE_C_COMPILER "gcc")
-set(CMAKE_CXX_COMPILER "g++")
-
 set(CMAKE_CXX_STANDARD 20)
 
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+
+# assert usage of libfmt
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13.0)
+        message(FATAL_ERROR "GCC version must be at least 13.0")
+    endif()
+    message(STATUS "Using GCC version ${CMAKE_CXX_COMPILER_VERSION}")
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 17.0)
+        message(FATAL_ERROR "Clang version must be at least 17.0")
+    endif()
+    message(STATUS "Using Clang version ${CMAKE_CXX_COMPILER_VERSION}")
+else()
+    message(FATAL_ERROR "Unsupported compiler: ${CMAKE_CXX_COMPILER_ID}")
+endif()
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build (Debug or Release)" FORCE)
@@ -52,9 +64,9 @@ set(FRONT_SOURCES
     ${CMAKE_SOURCE_DIR}/src/frontend/ui_base.cc
     ${CMAKE_SOURCE_DIR}/src/frontend/main_menu.cc
 
-    ${CMAKE_SOURCE_DIR}/src/frontend/firewall/firewall_config.cc
+    ${CMAKE_SOURCE_DIR}/src/frontend/firewall/firewall_ui.cc
 
-    ${CMAKE_SOURCE_DIR}/src/frontend/package_manager/package_config.cc
+    ${CMAKE_SOURCE_DIR}/src/frontend/package_manager/package_ui.cc
 )
 
 set(BACK_SOURCES
@@ -98,13 +110,16 @@ endif()
 include_directories(include)
 include_directories(/usr/include/yui)
 
+#libyui
 find_library(YUI_LIB yui REQUIRED)
 find_path(YUI_INCLUDE_DIR yui REQUIRED)
 
+# libiptc
 find_library(IPTC_LIB ip4tc ip6tc REQUIRED)
 find_path(IPTC_INCLUDE_DIR libiptc/libiptc.h REQUIRED)
 include_directories(${IPTC_INCLUDE_DIR})
 
+# if new lib to be linked, add it to the ALL_LIBS variable
 set(ALL_LIBS ${YUI_LIB} ${IPTC_LIB})
 
 add_executable(${PROJECT_NAME} ${SOURCES})
