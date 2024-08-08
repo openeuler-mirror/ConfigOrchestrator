@@ -35,28 +35,24 @@ public:
   [[nodiscard]] auto getComponentName() const -> string override;
 
 private:
+  using target_t = tuple<YWidget *, function<bool()>>;
+
   auto userDisplay(YDialog *main_dialog, DisplayLayout layout)
       -> DisplayResult override;
 
   auto userHandleEvent(YEvent *event) -> HandleResult override;
 
-  auto userControlHandle(YEvent *event) -> HandleResult;
-
   auto createUpdateRule(const ipt_entry *origin) -> shared_ptr<RuleRequest>;
 
-  auto createChain() -> bool;
+  auto createChain() -> shared_ptr<ChainRequest>;
+
+  auto fresh(YDialog *main_dialog, DisplayLayout layout) -> bool;
 
   shared_ptr<FirewallContext> firewall_context_;
   shared_ptr<FirewallBackend> firewall_backend_;
+  vector<target_t> widgets_targets_;
 
-  vector<string> subConfigs_;
-  vector<YPushButton *> buttons_;
-
-  /* user control zone */
-  YPushButton *add_chain_button_;
-  YPushButton *add_rule_button_;
-  YPushButton *del_chain_button_;
-  YPushButton *del_rule_button_;
+  vector<string> iptable_children;
 
   const static string kNonSuWarnText;
   const static string kAddRuleButtonText;
@@ -65,8 +61,6 @@ private:
   const static string kDelChainButtonText;
   const static string kUpdateRuleDialogTitle;
   const static string kInsertRuleDialogTitle;
-
-  using target_t = tuple<YWidget *, function<bool()>>;
 };
 
 #endif
