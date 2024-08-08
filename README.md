@@ -20,6 +20,8 @@ $ mkdir -p build && cd build
 $ cmake -DCMAKE_BUILD_TYPE=Debug ..
 $ cmake --build . --parallel
 
+$ cmake -DCMAKE_C_COMPILER=clang-12 -DCMAKE_CXX_COMPILER=clang++-12 -DCMAKE_BUILD_TYPE=Debug .. && cmake --build . --parallel
+
 $ ./controlpanel
 ```
 
