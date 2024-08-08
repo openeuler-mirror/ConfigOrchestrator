@@ -24,6 +24,8 @@ public:
   string table_{};
   string chain_{};
 
+  string last_error_{};
+
   [[nodiscard]] auto serialize() const -> string {
     string serialized = "Firewall Config";
 
@@ -35,6 +37,13 @@ public:
       serialized += " Chain: " + chain_;
     }
     return serialized;
+  }
+
+  auto setLastError(const string &error) -> void { last_error_ = error; }
+
+  [[nodiscard]] auto getLastError() const -> string {
+    static const string kNoError = "No Error Recorded.";
+    return last_error_.empty() ? kNoError : last_error_;
   }
 };
 
