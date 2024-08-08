@@ -100,7 +100,7 @@ TEST_F(FirewallTest, add_rule) {
   ASSERT_EQ(rule_num + 1, static_cast<int>(rules.size()));
 
   // remove the rule
-  ASSERT_TRUE(fwb->removeRule(write_context, 1));
+  ASSERT_TRUE(fwb->removeRule(write_context, 0));
   ASSERT_TRUE(commit());
 
   rules = fwb->getSubconfigs(write_context);
