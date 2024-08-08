@@ -35,6 +35,7 @@
 using std::function;
 using std::shared_ptr;
 using std::string;
+using std::tuple;
 using std::weak_ptr;
 
 class DisplayLayout {
@@ -60,8 +61,6 @@ public:
 
   auto handleEvent() -> void;
 
-  auto warnDialog(const string &warning) -> void;
-
   auto isMainMenu() -> bool;
 
   auto getName() const -> string;
@@ -70,9 +69,20 @@ public:
 
   [[nodiscard]] auto getFactory() const -> YWidgetFactory *;
 
-  [[nodiscard]] virtual auto getComponentDescription() const -> string = 0;
+  auto showWarningDialog(const string &msg) -> void;
 
-  [[nodiscard]] virtual auto getComponentName() const -> string = 0;
+  /**
+   * @brief Get the page desc, shown in help dialog
+   */
+  [[nodiscard]] virtual auto getPageDescription() const -> string = 0;
+
+  /**
+   * @brief Get the page name, shown in title
+   */
+  [[nodiscard]] virtual auto getPageName() const -> string = 0;
+
+protected:
+  using target_t = tuple<YWidget *, function<bool()>>;
 
 private:
   string name_;

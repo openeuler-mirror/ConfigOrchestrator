@@ -19,13 +19,13 @@ auto PackageManagerConfig::userHandleEvent(YEvent *event) -> HandleResult {
   return HandleResult::SUCCESS;
 }
 
-auto PackageManagerConfig::getComponentDescription() const -> string {
+auto PackageManagerConfig::getPageDescription() const -> string {
   static string componentDescription = R"(Configure package manager settings)";
 
   return componentDescription;
 };
 
-auto PackageManagerConfig::getComponentName() const -> string {
+auto PackageManagerConfig::getPageName() const -> string {
   static string componentName = "Package Manager (dnf) Configuration";
   return componentName;
 }

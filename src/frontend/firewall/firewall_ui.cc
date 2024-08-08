@@ -68,7 +68,7 @@ FirewallConfig::FirewallConfig(const string &name,
     : UIBase(name, parent), firewall_context_(std::move(firewall_context)) {
   if (!isSuperUser()) {
     yuiError() << "Non-root user try to open firewall configuration." << endl;
-    warnDialog(kNonSuWarnText);
+    showWarningDialog(kNonSuWarnText);
   }
 
   if (firewall_context_ == nullptr) {
@@ -137,12 +137,12 @@ auto FirewallConfig::fresh(YDialog *main_dialog, DisplayLayout layout) // NOLINT
           ss << "Failed to remove chain: " << firewall_context_->serialize()
              << ", Rule #" << index << ". Rule Brief: " << iptable_child << endl
              << "Error: " << firewall_context_->getLastError();
-          this->warnDialog(ss.str());
+          this->showWarningDialog(ss.str());
         } else {
           ss << "Chain removed: " << firewall_context_->serialize()
              << ", Rule #" << index << ". Rule Brief: " << iptable_child;
 
-          this->warnDialog(ss.str());
+          this->showWarningDialog(ss.str());
           ConfigManager::instance().registerApplyFunc(
               firewall_backend_->apply());
           fresh(main_dialog, layout);
@@ -164,11 +164,11 @@ auto FirewallConfig::fresh(YDialog *main_dialog, DisplayLayout layout) // NOLINT
         if (!res) {
           ss << "Failed to update chain: " << firewall_context_->serialize()
              << ", #" << index;
-          this->warnDialog(ss.str());
+          this->showWarningDialog(ss.str());
         } else {
           ss << "Chain updated: " << firewall_context_->serialize() << ", #"
              << index;
-          this->warnDialog(ss.str());
+          this->showWarningDialog(ss.str());
           ConfigManager::instance().registerApplyFunc(
               firewall_backend_->apply());
           fresh(main_dialog, layout);
@@ -211,11 +211,11 @@ auto FirewallConfig::userDisplay(YDialog *main_dialog, DisplayLayout layout)
 
             if (!res) {
               ss << "Failed to add chain.";
-              this->warnDialog(ss.str());
+              this->showWarningDialog(ss.str());
             } else {
               stringstream ss;
               ss << "Chain added: " << requset->chain_name_;
-              this->warnDialog(ss.str());
+              this->showWarningDialog(ss.str());
               ConfigManager::instance().registerApplyFunc(
                   firewall_backend_->apply());
 
@@ -237,10 +237,10 @@ auto FirewallConfig::userDisplay(YDialog *main_dialog, DisplayLayout layout)
             auto res = firewall_backend_->addRule(firewall_context_, request);
             if (!res) {
               ss << "Failed to add rule.";
-              this->warnDialog(ss.str());
+              this->showWarningDialog(ss.str());
             } else {
               ss << "Rule added: " << request->index_;
-              this->warnDialog(ss.str());
+              this->showWarningDialog(ss.str());
 
               ConfigManager::instance().registerApplyFunc(
                   firewall_backend_->apply());
@@ -260,10 +260,10 @@ auto FirewallConfig::userDisplay(YDialog *main_dialog, DisplayLayout layout)
 
       if (!res) {
         ss << "Failed to remove chain: " << firewall_context_->serialize();
-        this->warnDialog(ss.str());
+        this->showWarningDialog(ss.str());
       } else {
         ss << "Chain removed: " << firewall_context_->serialize();
-        this->warnDialog(ss.str());
+        this->showWarningDialog(ss.str());
 
         ConfigManager::instance().registerApplyFunc(firewall_backend_->apply());
         fresh(main_dialog, layout);
@@ -295,13 +295,13 @@ auto FirewallConfig::userHandleEvent(YEvent *event) -> HandleResult {
   return res;
 }
 
-auto FirewallConfig::getComponentDescription() const -> string {
+auto FirewallConfig::getPageDescription() const -> string {
   static string componentDescription = R"(Configure network firewall settings)";
 
   return componentDescription;
 };
 
-auto FirewallConfig::getComponentName() const -> string {
+auto FirewallConfig::getPageName() const -> string {
   static string componentName = "Network Firewall Configuration";
 
   return getName();
@@ -490,7 +490,7 @@ auto FirewallConfig::createUpdateRule(const ipt_entry *origin) // NOLINT
         r &= func();
         if (!r) {
           static const string kInvalidInput = "Invalid input.";
-          this->warnDialog(kInvalidInput);
+          this->showWarningDialog(kInvalidInput);
           break;
         }
       }
@@ -550,7 +550,7 @@ auto FirewallConfig::createChain() -> shared_ptr<ChainRequest> {
         r &= func();
         if (!r) {
           static const string kInvalidInput = "Invalid input.";
-          this->warnDialog(kInvalidInput);
+          this->showWarningDialog(kInvalidInput);
           break;
         }
       }

@@ -40,7 +40,7 @@ auto MainMenu::userHandleEvent(YEvent *event) -> HandleResult {
   return HandleResult::SUCCESS;
 }
 
-auto MainMenu::getComponentDescription() const -> string {
+auto MainMenu::getPageDescription() const -> string {
   static string componentDescription =
       R"(Main Menu of Control Panel of OpenEuler.
         Developed in 2024 OSPP.)";
@@ -48,7 +48,7 @@ auto MainMenu::getComponentDescription() const -> string {
   return componentDescription;
 };
 
-auto MainMenu::getComponentName() const -> string {
+auto MainMenu::getPageName() const -> string {
   static string componentName = "Main Menu";
   return componentName;
 }

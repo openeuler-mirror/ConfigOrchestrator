@@ -15,9 +15,9 @@ public:
 
   ~PackageManagerConfig() override = default;
 
-  [[nodiscard]] auto getComponentDescription() const -> string override;
+  [[nodiscard]] auto getPageDescription() const -> string override;
 
-  [[nodiscard]] auto getComponentName() const -> string override;
+  [[nodiscard]] auto getPageName() const -> string override;
 
 private:
   auto userDisplay(YDialog *main_dialog, DisplayLayout layout)

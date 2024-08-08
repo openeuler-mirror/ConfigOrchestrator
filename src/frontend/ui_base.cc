@@ -96,7 +96,7 @@ auto UIBase::handleHelp() const {
   YLayoutBox *vbox = fac->createVBox(dialog);
   YAlignment *minSize =
       fac->createMinSize(vbox, kPopDialogMinWidth, kPopDialogMinHeight);
-  YLabel *label = fac->createOutputField(minSize, getComponentDescription());
+  YLabel *label = fac->createOutputField(minSize, getPageDescription());
   label->setAutoWrap();
 
   fac->createPushButton(vbox, "OK");
@@ -112,7 +112,7 @@ auto UIBase::handleExit() const -> bool {
   YLayoutBox *vbox = fac->createVBox(warn_dialog);
   YAlignment *minSize =
       fac->createMinSize(vbox, kPopDialogMinWidth, kPopDialogMinHeight);
-  YLabel *label = fac->createOutputField(minSize, getComponentDescription());
+  YLabel *label = fac->createOutputField(minSize, getPageDescription());
   label->setAutoWrap();
 
   auto *exit_button = fac->createPushButton(vbox, "Exit");
@@ -160,9 +160,9 @@ auto UIBase::handleButtons(YEvent *event) -> HandleResult {
   }
   if (event->widget() == apply_button_) {
     if (!ConfigManager::instance().apply()) {
-      warnDialog("Failed to apply all changes.");
+      showWarningDialog("Failed to apply all changes.");
     } else {
-      warnDialog("Successfully applied changes.");
+      showWarningDialog("Successfully applied changes.");
     }
   }
 
@@ -207,7 +207,7 @@ auto UIBase::handleEvent() -> void {
 
 auto UIBase::isMainMenu() -> bool { return parent_.expired(); }
 
-auto UIBase::warnDialog(const string &warning) -> void {
+auto UIBase::showWarningDialog(const string &warning) -> void {
   YDialog *dialog = factory_->createPopupDialog();
 
   YLayoutBox *vbox = factory_->createVBox(dialog);
