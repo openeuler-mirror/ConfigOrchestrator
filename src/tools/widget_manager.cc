@@ -1,7 +1,8 @@
 #include "tools/widget_manager.h"
+#include "controlpanel.h"
 
-auto WidgetManager::addWidget(YWidget *widget, std::function<bool()> func)
-    -> void {
+auto WidgetManager::addWidget(YWidget *widget,
+                              std::function<HandleResult()> func) -> void {
   if (widgets_.contains(widget)) {
     widgets_.at(widget) = std::move(func);
   } else {
@@ -19,9 +20,7 @@ auto WidgetManager::handleEvent(YEvent *event) -> HandleResult {
   auto *widget_to_handle = event->widget();
 
   if (widgets_.contains(widget_to_handle)) {
-    if (widgets_.at(widget_to_handle)()) {
-      return HandleResult::BREAK;
-    }
+    return widgets_.at(widget_to_handle)();
   }
-  return HandleResult::CONT;
+  return HandleResult::CONT; /* use next widget manager */
 }

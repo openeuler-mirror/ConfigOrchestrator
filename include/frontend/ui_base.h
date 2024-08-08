@@ -118,11 +118,7 @@ private:
 
   virtual auto userHandleEvent(YEvent *event) -> HandleResult = 0;
 
-  [[nodiscard]] auto handleButtons(YEvent *event) -> HandleResult;
-
-  [[nodiscard]] auto handleHelp() const;
-
-  [[nodiscard]] auto handleExit() const -> bool;
+  [[nodiscard]] auto checkExit() const -> bool;
 };
 
 #endif // ui_base_H

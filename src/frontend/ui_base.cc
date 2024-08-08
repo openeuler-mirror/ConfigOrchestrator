@@ -4,6 +4,7 @@
 #include "YTypes.h"
 
 #include "backend/config_manager.h"
+#include "controlpanel.h"
 #include "frontend/ui_base.h"
 #include "tools/cplog.h"
 #include "tools/uitools.h"
@@ -11,9 +12,11 @@
 #include <cassert>
 #include <cstdlib>
 #include <exception>
+#include <functional>
 #include <memory>
 #include <string>
 #include <type_traits>
+#include <vector>
 
 const string UIBase::kSoftwareName = "Control Panel";
 const string UIBase::kBackButtonName = "&Back";
@@ -58,12 +61,12 @@ auto UIBase::display() -> void {
       auto *back_button_ = factory_->createPushButton(gcl, kBackButtonName);
       widget_manager_.addWidget(back_button_, [this]() {
         if (isMainMenu()) {
-          return false; /* close is required */
+          return HandleResult::SUCCESS; /* close is required */
         }
 
         main_dialog_->destroy();
         main_dialog_ = nullptr;
-        return true;
+        return HandleResult::BREAK; /* break handler */
       });
     }
 
@@ -71,7 +74,7 @@ auto UIBase::display() -> void {
       auto *search_button = factory_->createPushButton(gcl, kSearchButtonName);
       widget_manager_.addWidget(search_button, [this]() {
         showDialog(dialog_meta::ERROR, "Search is not implemented yet.");
-        return true;
+        return HandleResult::SUCCESS;
       });
     }
 
@@ -79,6 +82,13 @@ auto UIBase::display() -> void {
       /* merge with cancel handling */
       auto *close_button = factory_->createPushButton(gcl, kCloseButtonName);
       close_button->setRole(YButtonRole::YCancelButton);
+      widget_manager_.addWidget(close_button, [this]() {
+        if (!ConfigManager::instance().hasUnsavedConfig() || checkExit()) {
+          YDialog::deleteAllDialogs(); /* check unsaved configs */
+          return HandleResult::EXIT;
+        }
+        return HandleResult::SUCCESS;
+      });
     }
 
     {
@@ -92,7 +102,7 @@ auto UIBase::display() -> void {
         } else {
           showDialog(dialog_meta::INFO, succ_msg);
         }
-        return true;
+        return HandleResult::SUCCESS;
       });
 
       apply_button->setRole(YButtonRole::YApplyButton);
@@ -102,7 +112,7 @@ auto UIBase::display() -> void {
       auto *help_button = factory_->createPushButton(gcl, kHelpButtonName);
       widget_manager_.addWidget(help_button, [this]() {
         showDialog(dialog_meta::HELP, getPageDescription());
-        return true;
+        return HandleResult::SUCCESS;
       });
       help_button->setRole(YButtonRole::YHelpButton);
     }
@@ -125,7 +135,7 @@ auto UIBase::display() -> void {
   userDisplay(main_dialog_, {feature_layout_, user_control_layout_});
 }
 
-auto UIBase::handleExit() const -> bool {
+auto UIBase::checkExit() const -> bool {
   const static string msg = "There are unsaved changes. Do you want to exit?";
 
   YWidgetFactory *fac = YUI::widgetFactory();
@@ -151,22 +161,6 @@ auto UIBase::handleExit() const -> bool {
   return res;
 }
 
-auto UIBase::handleButtons(YEvent *event) -> HandleResult {
-  if (event->eventType() == YEvent::CancelEvent) {
-    auto real_exit = true; /* check unsaved configs */
-    if (ConfigManager::instance().hasUnsavedConfig()) {
-      real_exit = handleExit();
-    }
-
-    if (real_exit) {
-      YDialog::deleteAllDialogs();
-      return HandleResult::EXIT;
-    }
-  }
-
-  return HandleResult::SUCCESS;
-}
-
 auto UIBase::handleEvent() -> void {
   if (main_dialog_ == nullptr) {
     auto msg = fmt::format("main_dialog is nullptr when handling event\n");
@@ -176,22 +170,36 @@ auto UIBase::handleEvent() -> void {
 
   while (true) {
     auto *event = main_dialog_->waitForEvent();
-
     if (event == nullptr) {
       yuiError() << "event is nullptr when return from waiting" << endl;
       std::terminate();
     }
 
-    auto res = handleButtons(event);
-    if (res == HandleResult::EXIT) {
-      exit(0);
-    } else if (res == HandleResult::BREAK) {
-      break;
+    if (event->eventType() == YEvent::CancelEvent) {
+      if (!ConfigManager::instance().hasUnsavedConfig() || checkExit()) {
+        YDialog::deleteAllDialogs(); /* check unsaved configs */
+        exit(0);
+      }
     }
 
-    auto user_result = userHandleEvent(event);
-    if (user_result == HandleResult::EXIT) {
+    using handlers_t = vector<function<HandleResult()>>;
+    handlers_t handlers = {
+        {[this, event]() { return widget_manager_.handleEvent(event); }},
+        [this, event]() { return userHandleEvent(event); },
+    };
+
+    HandleResult result = HandleResult::CONT;
+    for (const auto &handler : handlers) {
+      result = handler();
+      if (result != HandleResult::CONT) {
+        break;
+      }
+    }
+    if (result == HandleResult::BREAK) {
       break;
+    }
+    if (result == HandleResult::EXIT) {
+      exit(0);
     }
   }
 }

@@ -20,14 +20,14 @@ public:
   WidgetManager() = default;
   ~WidgetManager() = default;
 
-  auto addWidget(YWidget *widget, std::function<bool()> func) -> void;
+  auto addWidget(YWidget *widget, std::function<HandleResult()> func) -> void;
 
   auto removeWidget(YWidget *widget) -> void;
 
   auto handleEvent(YEvent *event) -> HandleResult;
 
 private:
-  std::unordered_map<YWidget *, std::function<bool()>> widgets_;
+  std::unordered_map<YWidget *, std::function<HandleResult()>> widgets_;
 };
 
 #endif

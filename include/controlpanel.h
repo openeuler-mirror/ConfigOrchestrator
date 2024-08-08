@@ -29,24 +29,15 @@
 #include <yui/YUI.h>
 #include <yui/YWidgetFactory.h>
 
-enum class HandleResult : unsigned int { SUCCESS, BREAK, EXIT, NEW_PAGE, CONT };
+/**
+ * SUCCESS: event has been handled
+ * BREAK: event has been handled and break the event loop
+ * EXIT: exit the program
+ * CONT: continue to the next event handler since event not handled
+ */
+enum class HandleResult : unsigned int { SUCCESS, BREAK, EXIT, CONT };
 
 enum class DisplayResult : unsigned int { SUCCESS, ERROR };
-
-static void YUIUnImpl(const std::string &component) {
-  static const std::string msg = "Unimplemented function called";
-
-  YWidgetFactory *fac = YUI::widgetFactory();
-  YDialog *dialog = fac->createPopupDialog();
-
-  auto real_msg = component + ": " + msg;
-  YLayoutBox *vbox = fac->createVBox(dialog);
-  YLabel *label = fac->createOutputField(vbox, real_msg);
-
-  fac->createPushButton(vbox, "OK");
-  dialog->waitForEvent();
-  dialog->destroy();
-}
 
 static void occupy(YLayoutBox *layout) {
   [[maybe_unused]] YLabel *label =
