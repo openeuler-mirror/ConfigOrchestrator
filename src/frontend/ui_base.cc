@@ -22,6 +22,16 @@ const string UIBase::kCloseButtonName = "&Close";
 const string UIBase::kApplyButtonName = "&Apply";
 const string UIBase::kHelpButtonName = "&Help";
 
+static auto createMinsizeMarginBox(YWidgetFactory *fac, YWidget *parent) {
+  static constexpr YLayoutSize_t kHboxHorMargin = 4;
+  static constexpr YLayoutSize_t kHboxVertMargin = 0.1;
+  static constexpr YLayoutSize_t kHboxHorMinSize = 10;
+  static constexpr YLayoutSize_t kHboxVertMinSize = 1;
+
+  auto *mbox = fac->createMarginBox(parent, kHboxHorMargin, kHboxVertMargin);
+  return fac->createMinSize(mbox, kHboxHorMinSize, kHboxVertMinSize);
+}
+
 auto UIBase::display() -> void {
   main_dialog_ = factory_->createDialog(YDialogType::YMainDialog);
   main_layout_ = factory_->createVBox(main_dialog_);
@@ -29,61 +39,87 @@ auto UIBase::display() -> void {
   main_layout_->setStretchable(YUIDimension::YD_VERT, true);
 
   {
-    YAlignment *mbox = factory_->createMarginBox(main_layout_, kHboxHorMargin,
-                                                 kHboxVertMargin);
-    YAlignment *min_size =
-        factory_->createMinSize(mbox, kHboxHorMinSize, kHboxVertMinSize);
+    auto *msize = createMinsizeMarginBox(factory_, main_layout_);
+    upper_layout_ = factory_->createHBox(msize);
 
-    upper_layout_ = factory_->createHBox(min_size);
-    factory_->createLabel(upper_layout_, name_);
+    const auto &title = getPageName();
+    factory_->createLabel(upper_layout_, title);
   }
 
   factory_->createVSpacing(main_layout_, kVSpaceSize);
 
   {
-    YAlignment *mbox = factory_->createMarginBox(main_layout_, kHboxHorMargin,
-                                                 kHboxVertMargin);
-    YAlignment *min_size =
-        factory_->createMinSize(mbox, kHboxHorMinSize, kHboxVertMinSize);
+    auto *msize = createMinsizeMarginBox(factory_, main_layout_);
 
-    global_control_layout_ = factory_->createHBox(min_size);
+    global_control_layout_ = factory_->createHBox(msize);
+    auto *gcl = global_control_layout_; /* alias */
 
-    back_button_ =
-        factory_->createPushButton(global_control_layout_, kBackButtonName);
-    search_button_ =
-        factory_->createPushButton(global_control_layout_, kSearchButtonName);
-    close_button_ =
-        factory_->createPushButton(global_control_layout_, kCloseButtonName);
-    apply_button_ =
-        factory_->createPushButton(global_control_layout_, kApplyButtonName);
-    help_button_ =
-        factory_->createPushButton(global_control_layout_, kHelpButtonName);
+    {
+      auto *back_button_ = factory_->createPushButton(gcl, kBackButtonName);
+      widget_manager_.addWidget(back_button_, [this]() {
+        if (isMainMenu()) {
+          return false; /* close is required */
+        }
 
-    close_button_->setRole(YButtonRole::YCancelButton);
-    apply_button_->setRole(YButtonRole::YApplyButton);
-    help_button_->setRole(YButtonRole::YHelpButton);
+        main_dialog_->destroy();
+        main_dialog_ = nullptr;
+        return true;
+      });
+    }
+
+    {
+      auto *search_button = factory_->createPushButton(gcl, kSearchButtonName);
+      widget_manager_.addWidget(search_button, [this]() {
+        showDialog(dialog_meta::ERROR, "Search is not implemented yet.");
+        return true;
+      });
+    }
+
+    {
+      /* merge with cancel handling */
+      auto *close_button = factory_->createPushButton(gcl, kCloseButtonName);
+      close_button->setRole(YButtonRole::YCancelButton);
+    }
+
+    {
+      auto *apply_button = factory_->createPushButton(gcl, kApplyButtonName);
+      widget_manager_.addWidget(apply_button, [this]() {
+        static const string fail_msg = "Failed to apply all changes.";
+        static const string succ_msg = "Successfully applied changes.";
+
+        if (!ConfigManager::instance().apply()) {
+          showDialog(dialog_meta::ERROR, fail_msg);
+        } else {
+          showDialog(dialog_meta::INFO, succ_msg);
+        }
+        return true;
+      });
+
+      apply_button->setRole(YButtonRole::YApplyButton);
+    }
+
+    {
+      auto *help_button = factory_->createPushButton(gcl, kHelpButtonName);
+      widget_manager_.addWidget(help_button, [this]() {
+        showDialog(dialog_meta::HELP, getPageDescription());
+        return true;
+      });
+      help_button->setRole(YButtonRole::YHelpButton);
+    }
   }
 
   factory_->createVSpacing(main_layout_, kVSpaceSize);
 
   {
-    YAlignment *mbox = factory_->createMarginBox(main_layout_, kHboxHorMargin,
-                                                 kHboxVertMargin);
-    YAlignment *min_size =
-        factory_->createMinSize(mbox, kHboxHorMinSize, kHboxVertMinSize);
-
-    feature_layout_ = factory_->createVBox(min_size);
+    auto *msize = createMinsizeMarginBox(factory_, main_layout_);
+    feature_layout_ = factory_->createVBox(msize);
   }
 
   factory_->createVSpacing(main_layout_, kVSpaceSize);
 
   {
-    YAlignment *mbox = factory_->createMarginBox(main_layout_, kHboxHorMargin,
-                                                 kHboxVertMargin);
-    YAlignment *min_size =
-        factory_->createMinSize(mbox, kHboxHorMinSize, kHboxVertMinSize);
-
-    user_control_layout_ = factory_->createHBox(min_size);
+    auto *msize = createMinsizeMarginBox(factory_, main_layout_);
+    user_control_layout_ = factory_->createHBox(msize);
   }
 
   userDisplay(main_dialog_, {feature_layout_, user_control_layout_});
@@ -91,6 +127,7 @@ auto UIBase::display() -> void {
 
 auto UIBase::handleExit() const -> bool {
   const static string msg = "There are unsaved changes. Do you want to exit?";
+
   YWidgetFactory *fac = YUI::widgetFactory();
   YDialog *warn_dialog = fac->createPopupDialog();
 
@@ -115,9 +152,8 @@ auto UIBase::handleExit() const -> bool {
 }
 
 auto UIBase::handleButtons(YEvent *event) -> HandleResult {
-  if (event->widget() == close_button_ ||
-      event->eventType() == YEvent::CancelEvent) {
-    auto real_exit = true;
+  if (event->eventType() == YEvent::CancelEvent) {
+    auto real_exit = true; /* check unsaved configs */
     if (ConfigManager::instance().hasUnsavedConfig()) {
       real_exit = handleExit();
     }
@@ -128,35 +164,13 @@ auto UIBase::handleButtons(YEvent *event) -> HandleResult {
     }
   }
 
-  if (event->widget() == help_button_) {
-    showDialog(dialog_meta::HELP, getPageDescription());
-  }
-
-  if (event->widget() == back_button_) {
-    assert(main_dialog_ != nullptr);
-
-    main_dialog_->destroy();
-    main_dialog_ = nullptr;
-    return HandleResult::BREAK;
-  }
-
-  if (event->widget() == search_button_) {
-    YUIUnImpl("Search Button");
-  }
-  if (event->widget() == apply_button_) {
-    if (!ConfigManager::instance().apply()) {
-      showDialog(dialog_meta::ERROR, "Failed to apply all changes.");
-    } else {
-      showDialog(dialog_meta::INFO, "Successfully applied changes.");
-    }
-  }
-
   return HandleResult::SUCCESS;
 }
 
 auto UIBase::handleEvent() -> void {
   if (main_dialog_ == nullptr) {
-    yuiError() << "main_dialog is nullptr when handling event" << endl;
+    auto msg = fmt::format("main_dialog is nullptr when handling event\n");
+    yuiError() << msg;
     return;
   }
 

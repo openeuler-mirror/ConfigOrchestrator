@@ -20,6 +20,7 @@
 #include "YLayoutBox.h"
 #include "YUI.h"
 #include "YWidgetFactory.h"
+#include "tools/widget_manager.h"
 #include <yui/YAlignment.h>
 #include <yui/YApplication.h>
 #include <yui/YDialog.h>
@@ -81,7 +82,7 @@ public:
   [[nodiscard]] virtual auto getPageName() const -> string = 0;
 
 protected:
-  using target_t = tuple<YWidget *, function<bool()>>;
+  using widget_func_t = tuple<YWidget *, function<bool()>>;
 
 private:
   string name_;
@@ -96,11 +97,7 @@ private:
   YLayoutBox *feature_layout_;
   YLayoutBox *user_control_layout_;
 
-  YPushButton *back_button_;
-  YPushButton *search_button_;
-  YPushButton *close_button_;
-  YPushButton *apply_button_;
-  YPushButton *help_button_;
+  WidgetManager widget_manager_;
 
   static constexpr YLayoutSize_t kHboxHorMargin = 4;
   static constexpr YLayoutSize_t kHboxVertMargin = 0.1;
@@ -116,8 +113,8 @@ private:
   static const string kApplyButtonName;
   static const string kHelpButtonName;
 
-  virtual auto userDisplay(YDialog *main_dialog, DisplayLayout layout)
-      -> DisplayResult = 0;
+  virtual auto userDisplay(YDialog *main_dialog,
+                           DisplayLayout layout) -> DisplayResult = 0;
 
   virtual auto userHandleEvent(YEvent *event) -> HandleResult = 0;
 
