@@ -20,17 +20,22 @@ $ mkdir -p build && cd build
 $ cmake -DCMAKE_BUILD_TYPE=Debug ..
 $ cmake --build . --parallel
 
-$ cmake -DCMAKE_C_COMPILER=clang-12 -DCMAKE_CXX_COMPILER=clang++-12 -DCMAKE_BUILD_TYPE=Debug .. && cmake --build . --parallel
-
 $ ./controlpanel
 ```
 
 ## Test
 
-We use gtsam for testing. You can install it by:
+We use gtest for testing. You can test all cases by:
 
 ```bash
 ctest
 ```
 ## How to add a configuration
+
+
+## Code Conduct
+
+- use fmt for logging
+- use smart pointer as possible
+- use gtest for testing
 

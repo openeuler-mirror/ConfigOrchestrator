@@ -82,6 +82,7 @@ set(TOOL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/tools/sys.cc
     ${CMAKE_SOURCE_DIR}/src/tools/iptools.cc
     ${CMAKE_SOURCE_DIR}/src/tools/uitools.cc
+    ${CMAKE_SOURCE_DIR}/src/tools/widget_manager.cc
 )
 
 set(NON_MAIN_SOURCES
@@ -120,8 +121,15 @@ find_library(IPTC_LIB ip4tc ip6tc REQUIRED)
 find_path(IPTC_INCLUDE_DIR libiptc/libiptc.h REQUIRED)
 include_directories(${IPTC_INCLUDE_DIR})
 
+include(FetchContent)
+FetchContent_Declare(
+  fmt
+  GIT_REPOSITORY https://github.com/fmtlib/fmt
+  GIT_TAG        e69e5f977d458f2650bb346dadf2ad30c5320281) # 10.2.1
+FetchContent_MakeAvailable(fmt)
+
 # if new lib to be linked, add it to the ALL_LIBS variable
-set(ALL_LIBS ${YUI_LIB} ${IPTC_LIB})
+set(ALL_LIBS ${YUI_LIB} ${IPTC_LIB} fmt::fmt)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} ${ALL_LIBS})
