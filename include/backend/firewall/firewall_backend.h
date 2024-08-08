@@ -6,6 +6,7 @@
 
 #include "backend/config_backend_base.h"
 #include "backend/firewall/firewall_context.h"
+#include "frontend/firewall/chain_request.h"
 #include "frontend/firewall/rule_request.h"
 #include "tools/cplog.h"
 #include "tools/sys.h"
@@ -51,11 +52,14 @@ public:
   /* remove chain when level is chain, rule when level is rule
    * return false when other level call this function
    */
-  auto remove(const ctx_t &context) -> bool;
+  auto removeChain(const ctx_t &context) -> bool;
 
   auto removeRule(const ctx_t &context, int index) -> bool;
 
   auto addRule(const ctx_t &context, const shared_ptr<RuleRequest> &request)
+      -> bool;
+
+  auto addChain(const ctx_t &context, const shared_ptr<ChainRequest> &request)
       -> bool;
 
 private:

@@ -1,4 +1,3 @@
-// 8月 05 2024
 #ifndef RULE_REQUEST_H
 #define RULE_REQUEST_H
 

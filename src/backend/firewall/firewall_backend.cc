@@ -147,7 +147,7 @@ auto FirewallBackend::getRules(const ctx_t &context)
   return rules;
 }
 
-auto FirewallBackend::remove(const ctx_t &context) -> bool {
+auto FirewallBackend::removeChain(const ctx_t &context) -> bool {
   if (context->level_ == FirewallLevel::CHAIN) {
     return iptc_delete_chain(context->chain_.c_str(),
                              handles_.at(context->table_)) == 0;
@@ -157,7 +157,7 @@ auto FirewallBackend::remove(const ctx_t &context) -> bool {
     auto *handle = handles_.at(context->table_);
     (void)handle;
   } else {
-    yuiError() << "Cannot remove from table." << endl;
+    yuiError() << "Cannot remove chain from other." << endl;
     return false;
   }
 
@@ -354,6 +354,21 @@ auto FirewallBackend::serializeRule(const struct ipt_entry *rule) -> string {
     ss << "Target Size: " << target->u.user.target_size << "\n";
   }
   return ss.str();
+}
+
+auto FirewallBackend::addChain(const ctx_t &context,
+                               const shared_ptr<ChainRequest> &request)
+    -> bool {
+  auto *handle = handles_.at(context->table_);
+  ipt_chainlabel chain;
+  strncpy(chain, request->chain_name_.c_str(), sizeof(ipt_chainlabel));
+
+  if (iptc_create_chain(chain, handle) == 0) {
+    yuiError() << "Error creating chain: " << iptc_strerror(errno) << endl;
+    return false;
+  }
+
+  return true;
 }
 
 auto FirewallBackend::shortSerializeRule(const struct ipt_entry *rule)
