@@ -8,8 +8,10 @@ Checks: >
   readability-*,
   cppcoreguidelines-avoid-magic-numbers,
   cppcoreguidelines-narrowing-conversions,
-  misc-unused-parameters
-WarningsAsErrors: '*'
-HeaderFilterRegex: ''
-AnalyzeTemporaryDtors: false
+  misc-unused-parameters,
+  -performance-avoid-endl,
+  -readability-identifier-length,
+  -bugprone-unchecked-optional-access
+WarningsAsErrors: "*"
+HeaderFilterRegex: ""
 FormatStyle: none

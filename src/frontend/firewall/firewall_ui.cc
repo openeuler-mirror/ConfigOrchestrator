@@ -186,8 +186,8 @@ auto FirewallConfig::fresh(YDialog *main_dialog, DisplayLayout layout) // NOLINT
   return res;
 }
 
-auto FirewallConfig::userDisplay(YDialog *main_dialog, DisplayLayout layout)
-    -> DisplayResult {
+auto FirewallConfig::userDisplay(YDialog *main_dialog,
+                                 DisplayLayout layout) -> DisplayResult {
   (void)main_dialog;
 
   auto *fac = getFactory();
@@ -315,7 +315,7 @@ auto FirewallConfig::createUpdateRule(const ipt_entry *origin) // NOLINT
   YDialog *dialog = fac->createPopupDialog();
 
   auto request = std::make_shared<RuleRequest>();
-  request->matches_.emplace_back(RuleMatch());
+  request->matches_.emplace_back();
 
   YLayoutBox *vbox = fac->createVBox(dialog);
 
@@ -327,7 +327,7 @@ auto FirewallConfig::createUpdateRule(const ipt_entry *origin) // NOLINT
     title->autoWrap();
   }
 
-  vector<target_t> widget_targets;
+  vector<widget_func_t> widget_targets;
   {
     /* Line 1: position, protocol and target */
     auto *hbox = fac->createHBox(vbox);
@@ -478,24 +478,24 @@ auto FirewallConfig::createUpdateRule(const ipt_entry *origin) // NOLINT
   }
 
   auto *control_layout = fac->createHBox(vbox);
-  auto *ok = fac->createPushButton(control_layout, "&OK");
+  auto *confirm = fac->createPushButton(control_layout, "&OK");
   fac->createHSpacing(control_layout, button_space);
   auto *cancel = fac->createPushButton(control_layout, "&Cancel");
 
   while (true) {
     auto *event = dialog->waitForEvent();
-    if (event->widget() == ok) {
-      bool r = true;
+    if (event->widget() == confirm) {
+      bool flag = true;
       for (const auto &[_, func] : widget_targets) {
-        r &= func();
-        if (!r) {
+        flag &= func();
+        if (!flag) {
           static const string kInvalidInput = "Invalid input.";
           showDialog(dialog_meta::ERROR, kInvalidInput);
           break;
         }
       }
 
-      if (r) {
+      if (flag) {
         // special case for port range
         if (!request->matches_.front().src_port_range_.has_value() &&
             !request->matches_.front().dst_port_range_.has_value()) {
@@ -529,7 +529,7 @@ auto FirewallConfig::createChain() -> shared_ptr<ChainRequest> {
   auto *title = fac->createLabel(vbox, "Create Firewall Chain");
   title->autoWrap();
 
-  vector<target_t> widget_targets;
+  vector<widget_func_t> widget_targets;
   auto *name = fac->createInputField(vbox, "Chain Name");
   widget_targets.emplace_back(name, [name, &request]() {
     auto *widget = dynamic_cast<YInputField *>(name);
@@ -538,24 +538,24 @@ auto FirewallConfig::createChain() -> shared_ptr<ChainRequest> {
   });
 
   auto *control_layout = fac->createHBox(vbox);
-  auto *ok = fac->createPushButton(control_layout, "&OK");
+  auto *confirm = fac->createPushButton(control_layout, "&OK");
   fac->createHSpacing(control_layout, button_space);
   auto *cancel = fac->createPushButton(control_layout, "&Cancel");
 
   while (true) {
     auto *event = dialog->waitForEvent();
-    if (event->widget() == ok) {
-      bool r = true;
+    if (event->widget() == confirm) {
+      bool flag = true;
       for (const auto &[_, func] : widget_targets) {
-        r &= func();
-        if (!r) {
+        flag &= func();
+        if (!flag) {
           static const string kInvalidInput = "Invalid input.";
           showDialog(dialog_meta::ERROR, kInvalidInput);
           break;
         }
       }
 
-      if (r) {
+      if (flag) {
         dialog->destroy();
         return request;
       }

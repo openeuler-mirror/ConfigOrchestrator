@@ -91,8 +91,7 @@ TEST_F(FirewallTest, add_rule) {
                                  make_tuple<string, string>("22", "22"))}},
       "ACCEPT");
 
-  auto r = fwb->addRule(write_context, rule_request);
-  ASSERT_TRUE(r);
+  ASSERT_TRUE(fwb->addRule(write_context, rule_request));
 
   auto commit = fwb->apply();
   ASSERT_TRUE(commit());
@@ -101,9 +100,7 @@ TEST_F(FirewallTest, add_rule) {
   ASSERT_EQ(rule_num + 1, static_cast<int>(rules.size()));
 
   // remove the rule
-  auto res = fwb->removeRule(write_context, 1);
-  ASSERT_TRUE(res);
-
+  ASSERT_TRUE(fwb->removeRule(write_context, 1));
   ASSERT_TRUE(commit());
 
   rules = fwb->getSubconfigs(write_context);

@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <asm-generic/int-ll64.h>
 #include <bits/ranges_algo.h>
+#include <cstddef>
 #include <cstring>
 #include <libiptc/libiptc.h>
 #include <linux/in.h>
@@ -36,14 +37,12 @@ auto FirewallBackend::createHandlers() -> bool {
 }
 
 auto FirewallBackend::destroyHandlers() -> bool {
-  auto r = std::ranges::all_of(handles_, [](const auto &pair) {
-    if (pair.second != nullptr) {
-      iptc_free(pair.second);
-    }
-    return true;
-  });
-
-  if (r) {
+  if (std::ranges::all_of(handles_, [](const auto &pair) {
+        if (pair.second != nullptr) {
+          iptc_free(pair.second);
+        }
+        return true;
+      })) {
     handles_.clear();
     return true;
   }
@@ -100,8 +99,8 @@ auto FirewallBackend::getSubconfigs(const shared_ptr<FirewallContext> &context)
   return subconfigs;
 }
 
-auto FirewallBackend::createContext(const ctx_t &current, const string &name)
-    -> ctx_t {
+auto FirewallBackend::createContext(const ctx_t &current,
+                                    const string &name) -> ctx_t {
   shared_ptr<FirewallContext> context = make_shared<FirewallContext>(current);
 
   switch (context->level_) {
@@ -210,7 +209,8 @@ auto FirewallBackend::addRule(const ctx_t &context,
   std::vector<char> entry_buffer(size, 0);
   auto *entry = reinterpret_cast<struct ipt_entry *>(entry_buffer.data());
   auto *target_entry = reinterpret_cast<struct ipt_entry_target *>(
-      entry_buffer.data() + kIPTEntrySize + kMatchSize * matches_number);
+      entry_buffer.data() + kIPTEntrySize +
+      static_cast<long>(kMatchSize * matches_number));
 
   /* Part I: ipt_entry */
   entry->next_offset = size;
@@ -242,7 +242,7 @@ auto FirewallBackend::addRule(const ctx_t &context,
     memset(entry->ip.iniface_mask, kByteMask, request->iniface_->size() + 1);
   }
   if (request->outiface_.has_value()) {
-    strncpy(entry->ip.outiface, request->outiface_.value().c_str(), IFNAMSIZ);
+    strncpy(entry->ip.outiface, request->outiface_->c_str(), IFNAMSIZ);
     memset(entry->ip.outiface_mask, kByteMask, request->outiface_->size() + 1);
   }
 
@@ -261,7 +261,7 @@ auto FirewallBackend::addRule(const ctx_t &context,
   for (int i = 0; i < request->matches_.size(); i++) {
     if (request->proto_ == RequestProto::TCP) {
       auto *match = reinterpret_cast<struct ipt_entry_match *>(
-          entry->elems + i * kTCPMatchSize);
+          entry->elems + static_cast<ptrdiff_t>(i * kTCPMatchSize));
 
       match->u.user.match_size = kTCPMatchSize;
       strncpy(match->u.user.name, "tcp", IPT_FUNCTION_MAXNAMELEN);
@@ -271,7 +271,7 @@ auto FirewallBackend::addRule(const ctx_t &context,
       setPortRange(request->matches_[i].dst_port_range_, tcp->dpts);
     } else if (request->proto_ == RequestProto::UDP) {
       auto *match = reinterpret_cast<struct ipt_entry_match *>(
-          entry->elems + i * kUDPMatchSize);
+          entry->elems + static_cast<ptrdiff_t>(i * kUDPMatchSize));
 
       match->u.user.match_size = kUDPMatchSize;
       strncpy(match->u.user.name, "udp", IPT_FUNCTION_MAXNAMELEN);
@@ -357,9 +357,8 @@ auto FirewallBackend::serializeRule(const struct ipt_entry *rule) -> string {
   return ss.str();
 }
 
-auto FirewallBackend::addChain(const ctx_t &context,
-                               const shared_ptr<ChainRequest> &request)
-    -> bool {
+auto FirewallBackend::addChain(
+    const ctx_t &context, const shared_ptr<ChainRequest> &request) -> bool {
   auto *handle = handles_.at(context->table_);
   ipt_chainlabel chain;
   strncpy(chain, request->chain_name_.c_str(), sizeof(ipt_chainlabel));
@@ -383,59 +382,4 @@ auto FirewallBackend::shortSerializeRule(const struct ipt_entry *rule)
      << " | PROTO: " << proto2String(rule->ip.proto);
 
   return ss.str();
-}
-
-auto FirewallBackend::deserializeRule(const string &rule)
-    -> struct ipt_entry * {
-  string line;
-  string proto;
-
-  stringstream ss(rule);
-  auto new_rule = std::make_unique<struct ipt_entry>();
-
-  getline(ss, line, ':');
-  ss >> new_rule->ip.src.s_addr;
-  getline(ss, line, ':');
-  ss >> new_rule->ip.dst.s_addr;
-  getline(ss, line, ':');
-  ss >> new_rule->ip.smsk.s_addr;
-  getline(ss, line, ':');
-  ss >> new_rule->ip.dmsk.s_addr;
-  getline(ss, line, ':');
-
-  ss >> proto;
-  if (proto == "TCP") {
-    new_rule->ip.proto = IPPROTO_TCP;
-  } else if (proto == "UDP") {
-    new_rule->ip.proto = IPPROTO_UDP;
-  } else if (proto == "ICMP") {
-    new_rule->ip.proto = IPPROTO_ICMP;
-  } else {
-    new_rule->ip.proto = 0;
-  }
-
-  getline(ss, line, ':');
-  ss >> new_rule->ip.flags;
-  getline(ss, line, ':');
-  ss >> new_rule->ip.invflags;
-
-  getline(ss, line, ':');
-  ss >> new_rule->ip.iniface;
-  getline(ss, line, ':');
-  ss >> new_rule->ip.outiface;
-
-  getline(ss, line, ':');
-  ss >> new_rule->nfcache;
-  getline(ss, line, ':');
-  ss >> new_rule->target_offset;
-  getline(ss, line, ':');
-  ss >> new_rule->next_offset;
-  getline(ss, line, ':');
-  ss >> new_rule->comefrom;
-  getline(ss, line, ':');
-  ss >> new_rule->counters.pcnt;
-  getline(ss, line, ':');
-  ss >> new_rule->counters.bcnt;
-
-  return new_rule.release();
 }

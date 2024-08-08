@@ -11,8 +11,8 @@
 const string MainMenu::FirewallConfigName = "Firewall Config";
 const string MainMenu::PackageManagerName = "Package Manager Config";
 
-auto MainMenu::userDisplay(YDialog *main_dialog, DisplayLayout layout)
-    -> DisplayResult {
+auto MainMenu::userDisplay(YDialog *main_dialog,
+                           DisplayLayout layout) -> DisplayResult {
   (void)main_dialog;
 
   auto menus = getMenuConfigs();
@@ -54,7 +54,7 @@ auto MainMenu::getPageName() const -> string {
 }
 
 auto MainMenu::getMenuConfigs() -> vector<tuple<string, menu_render>> & {
-  static vector<tuple<string, menu_render>> r = {
+  static vector<tuple<string, menu_render>> configs = {
       {FirewallConfigName,
        [this]() {
          auto parent = shared_from_this();
@@ -73,5 +73,5 @@ auto MainMenu::getMenuConfigs() -> vector<tuple<string, menu_render>> & {
          child->handleEvent();
        }}};
 
-  return r;
+  return configs;
 }

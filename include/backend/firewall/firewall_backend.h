@@ -56,11 +56,11 @@ public:
 
   auto removeRule(const ctx_t &context, int index) -> bool;
 
-  auto addRule(const ctx_t &context, const shared_ptr<RuleRequest> &request)
-      -> bool;
+  auto addRule(const ctx_t &context,
+               const shared_ptr<RuleRequest> &request) -> bool;
 
-  auto addChain(const ctx_t &context, const shared_ptr<ChainRequest> &request)
-      -> bool;
+  auto addChain(const ctx_t &context,
+                const shared_ptr<ChainRequest> &request) -> bool;
 
 private:
   unordered_map<string, struct iptc_handle *> handles_;
@@ -75,8 +75,6 @@ private:
 
   /* tool func for iptable rules */
   static auto serializeRule(const struct ipt_entry *rule) -> string;
-
-  static auto deserializeRule(const string &rule) -> struct ipt_entry *;
 
   static auto shortSerializeRule(const struct ipt_entry *rule) -> string;
 };
