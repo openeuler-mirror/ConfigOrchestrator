@@ -2,6 +2,7 @@
 #include "backend/config_manager.h"
 #include "backend/firewall/firewall_context.h"
 #include "controlpanel.h"
+#include "fmt/core.h"
 #include "frontend/ui_base.h"
 #include "tools/iptools.h"
 #include "tools/uitools.h"
@@ -306,15 +307,34 @@ auto FirewallConfig::userHandleEvent(YEvent *event) -> HandleResult {
 }
 
 auto FirewallConfig::getPageDescription() const -> string {
-  static string componentDescription = R"(Configure network firewall settings)";
+  string componentDescription =
+      fmt::format("Configure network firewall settings, {}\n",
+                  firewall_context_->serialize());
 
+  switch (firewall_context_->level_) {
+  case FirewallLevel::OVERALL:
+    componentDescription += "Select a table to check all chains and you are "
+                            "allowed to add/delete chains.";
+    break;
+  case FirewallLevel::TABLE:
+    componentDescription += "Select a chain to check all rules."
+                            "You are allowed to add/delete rules.";
+    break;
+  case FirewallLevel::CHAIN:
+    componentDescription += "You can see details of each rule and update or "
+                            "delete them.";
+    break;
+  }
   return componentDescription;
 };
 
 auto FirewallConfig::getPageName() const -> string {
   static string componentName = "Network Firewall Configuration";
 
-  return getName();
+  if (firewall_context_->level_ == FirewallLevel::OVERALL) {
+    return componentName;
+  }
+  return firewall_context_->serialize();
 }
 
 auto FirewallConfig::createUpdateRule(const ipt_entry *origin) // NOLINT

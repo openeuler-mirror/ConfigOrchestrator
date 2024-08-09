@@ -30,11 +30,11 @@ public:
     string serialized = "Firewall Config";
 
     if (level_ > FirewallLevel::OVERALL) {
-      serialized += " Table: " + table_;
+      serialized += " | Table: " + table_;
     }
 
     if (level_ > FirewallLevel::TABLE) {
-      serialized += " Chain: " + chain_;
+      serialized += " | Chain: " + chain_;
     }
     return serialized;
   }
