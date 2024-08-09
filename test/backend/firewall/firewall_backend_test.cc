@@ -28,7 +28,7 @@ protected:
     ASSERT_EQ(write_context->table_, write_table);
     ASSERT_EQ(write_context->chain_, write_chain);
 
-    auto rules = fwb->getSubconfigs(write_context);
+    auto rules = fwb->getFirewallChildren(write_context);
     rule_num = static_cast<int>(rules.size());
   }
 
@@ -52,7 +52,7 @@ void TestChainContext(const shared_ptr<FirewallBackend> &fwb,
   ASSERT_EQ(ch_ctx->chain_, chain);
   cout << "Table: " << table << "\tChain: " << chain << endl;
 
-  auto rules = fwb->getSubconfigs(ch_ctx);
+  auto rules = fwb->getFirewallChildren(ch_ctx);
   for (const auto &rule : rules) {
     cout << rule << endl;
   }
@@ -66,7 +66,7 @@ void TestTableContext(const shared_ptr<FirewallBackend> &fwb,
   ASSERT_EQ(tb_ctx->level_, FirewallLevel::TABLE);
   ASSERT_EQ(tb_ctx->table_, table);
 
-  auto chains = fwb->getSubconfigs(tb_ctx);
+  auto chains = fwb->getFirewallChildren(tb_ctx);
   for (const auto &chain : chains) {
     TestChainContext(fwb, tb_ctx, table, chain);
   }
@@ -91,19 +91,19 @@ TEST_F(FirewallTest, add_rule) {
                                  make_tuple<string, string>("22", "22"))}},
       "ACCEPT");
 
-  ASSERT_TRUE(fwb->addRule(write_context, rule_request));
+  ASSERT_TRUE(fwb->insertRule(write_context, rule_request));
 
   auto commit = fwb->apply();
   ASSERT_TRUE(commit());
 
-  auto rules = fwb->getSubconfigs(write_context);
+  auto rules = fwb->getFirewallChildren(write_context);
   ASSERT_EQ(rule_num + 1, static_cast<int>(rules.size()));
 
   // remove the rule
   ASSERT_TRUE(fwb->removeRule(write_context, 0));
   ASSERT_TRUE(commit());
 
-  rules = fwb->getSubconfigs(write_context);
+  rules = fwb->getFirewallChildren(write_context);
   ASSERT_EQ(rule_num, static_cast<int>(rules.size()));
 }
 
