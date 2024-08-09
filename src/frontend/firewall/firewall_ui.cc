@@ -7,6 +7,7 @@
 #include "tools/iptools.h"
 #include "tools/uitools.h"
 
+#include <algorithm>
 #include <arpa/inet.h>
 #include <cstring>
 #include <optional>
@@ -61,8 +62,6 @@ const string FirewallConfig::kAddRuleButtonText = "&Add Firewall Rule";
 const string FirewallConfig::kAddChainButtonText = "&Add Firewall Chain";
 const string FirewallConfig::kDelRuleButtonText = "Delete";
 const string FirewallConfig::kDelChainButtonText = "&Delete Firewall Chain";
-const string FirewallConfig::kUpdateRuleDialogTitle = "Update Firewall Rule";
-const string FirewallConfig::kInsertRuleDialogTitle = "Insert Firewall Rule";
 
 FirewallConfig::FirewallConfig(const string &name,
                                const shared_ptr<UIBase> &parent,
@@ -83,7 +82,7 @@ FirewallConfig::FirewallConfig(const string &name,
 auto FirewallConfig::fresh(YDialog *main_dialog, DisplayLayout layout) // NOLINT
     -> bool {
   auto res = true;
-  iptable_children = firewall_backend_->getSubconfigs(firewall_context_);
+  iptable_children = firewall_backend_->getFirewallChildren(firewall_context_);
 
   auto *fac = getFactory();
   auto *main_layout = layout.feature_layout_;
@@ -134,8 +133,8 @@ auto FirewallConfig::fresh(YDialog *main_dialog, DisplayLayout layout) // NOLINT
 
       widgets_targets_.emplace_back(detail_button, [this, index]() {
         auto title = fmt::format("Rule Detail: #{}", index);
-        showDialog(title, firewall_backend_->getDetailedRule(firewall_context_,
-                                                             index));
+        showDialog(title,
+                   firewall_backend_->getRuleDetails(firewall_context_, index));
         return true;
       });
 
@@ -143,48 +142,39 @@ auto FirewallConfig::fresh(YDialog *main_dialog, DisplayLayout layout) // NOLINT
                                                  main_dialog, layout]() {
         auto res = firewall_backend_->removeRule(firewall_context_, index);
 
-        stringstream ss;
         if (!res) {
-          ss << "Failed to remove chain: " << firewall_context_->serialize()
-             << ", Rule #" << index << ". Rule Brief: " << iptable_child << endl
-             << "Error: " << firewall_context_->getLastError();
-          showDialog(dialog_meta::ERROR, ss.str());
-        } else {
-          ss << "Chain removed: " << firewall_context_->serialize()
-             << ", Rule #" << index << ". Rule Brief: " << iptable_child;
-
-          showDialog(dialog_meta::INFO, ss.str());
-          ConfigManager::instance().registerApplyFunc(
-              firewall_backend_->apply());
-          fresh(main_dialog, layout);
+          auto msg = fmt::format(
+              "Failed to remove chain: #{}\nChain brief: {}\nError: {}\n",
+              index, iptable_child, firewall_context_->getLastError());
+          showDialog(dialog_meta::ERROR, msg);
+          return true;
         }
 
+        ConfigManager::instance().registerApplyFunc(firewall_backend_->apply());
+        fresh(main_dialog, layout);
         return true;
       });
 
       widgets_targets_.emplace_back(update_button, [this, iptable_child, index,
                                                     main_dialog, layout]() {
-        auto res = firewall_backend_->removeRule(firewall_context_, index + 1);
-        // TODO(yiyan): get rule before deleting it
-        auto request = createUpdateRule(nullptr);
-        if (res && request != nullptr) {
-          res = firewall_backend_->addRule(firewall_context_, request);
+        auto request = createUpdateRule(index);
+        if (request == nullptr) {
+          return true; /* cancel */
         }
 
-        stringstream ss;
+        auto res =
+            firewall_backend_->updateRule(firewall_context_, request, index);
         if (!res) {
-          ss << "Failed to update chain: " << firewall_context_->serialize()
-             << ", #" << index;
-          showDialog(dialog_meta::ERROR, ss.str());
-        } else {
-          ss << "Chain updated: " << firewall_context_->serialize() << ", #"
-             << index;
-          showDialog(dialog_meta::INFO, ss.str());
-          ConfigManager::instance().registerApplyFunc(
-              firewall_backend_->apply());
-          fresh(main_dialog, layout);
+          auto msg = fmt::format(
+              "Failed to update chain: #{}\nChain brief: {}\nError: {}\n",
+              index, iptable_child, firewall_context_->getLastError());
+
+          showDialog(dialog_meta::ERROR, msg);
+          return true;
         }
 
+        ConfigManager::instance().registerApplyFunc(firewall_backend_->apply());
+        fresh(main_dialog, layout);
         return true;
       });
     }
@@ -213,54 +203,51 @@ auto FirewallConfig::userDisplay(YDialog *main_dialog,
     auto *add_chain_button_ =
         fac->createPushButton(control_layout, kAddChainButtonText);
 
-    widgets_targets_.emplace_back(
-        add_chain_button_, [this, main_dialog, layout]() {
-          auto requset = createChain();
-          if (requset != nullptr) {
-            auto res = firewall_backend_->addChain(firewall_context_, requset);
-            stringstream ss;
+    widgets_targets_.emplace_back(add_chain_button_, [this, main_dialog,
+                                                      layout]() {
+      auto requset = createChain();
+      if (requset != nullptr) {
+        auto res = firewall_backend_->insertChain(firewall_context_, requset);
+        stringstream ss;
 
-            if (!res) {
-              ss << "Failed to add chain.";
-              showDialog(dialog_meta::ERROR, ss.str());
-            } else {
-              stringstream ss;
-              ss << "Chain added: " << requset->chain_name_;
-              showDialog(dialog_meta::INFO, ss.str());
-              ConfigManager::instance().registerApplyFunc(
-                  firewall_backend_->apply());
+        if (!res) {
+          ss << "Failed to add chain.";
+          showDialog(dialog_meta::ERROR, ss.str());
+        } else {
+          stringstream ss;
+          ss << "Chain added: " << requset->chain_name_;
+          showDialog(dialog_meta::INFO, ss.str());
+          ConfigManager::instance().registerApplyFunc(
+              firewall_backend_->apply());
 
-              fresh(main_dialog, layout);
-            }
-          }
-          return true;
-        });
+          fresh(main_dialog, layout);
+        }
+      }
+      return true;
+    });
     break;
   }
   case FirewallLevel::CHAIN: {
     auto *add_rule_button_ =
         fac->createPushButton(control_layout, kAddRuleButtonText);
-    widgets_targets_.emplace_back(
-        add_rule_button_, [this, main_dialog, layout]() {
-          auto request = createUpdateRule(nullptr);
-          if (request != nullptr) {
-            stringstream ss;
-            auto res = firewall_backend_->addRule(firewall_context_, request);
-            if (!res) {
-              ss << "Failed to add rule.";
-              showDialog(dialog_meta::ERROR, ss.str());
-            } else {
-              ss << "Rule added: " << request->index_;
-              showDialog(dialog_meta::INFO, ss.str());
-
-              ConfigManager::instance().registerApplyFunc(
-                  firewall_backend_->apply());
-
-              fresh(main_dialog, layout);
-            }
-          }
+    widgets_targets_.emplace_back(add_rule_button_, [this, main_dialog,
+                                                     layout]() {
+      auto request = createUpdateRule(std::nullopt);
+      if (request != nullptr) {
+        auto res = firewall_backend_->insertRule(firewall_context_, request);
+        if (!res) {
+          auto msg = fmt::format("Failed to add rule, Error: {}\n",
+                                 firewall_context_->getLastError());
+          showDialog(dialog_meta::ERROR, msg);
           return true;
-        });
+        }
+
+        ConfigManager::instance().registerApplyFunc(firewall_backend_->apply());
+        fresh(main_dialog, layout);
+      }
+
+      return true;
+    });
 
     auto *del_chain_button_ =
         fac->createPushButton(control_layout, kDelChainButtonText);
@@ -337,19 +324,29 @@ auto FirewallConfig::getPageName() const -> string {
   return firewall_context_->serialize();
 }
 
-auto FirewallConfig::createUpdateRule(const ipt_entry *origin) // NOLINT
+auto FirewallConfig::createUpdateRule(optional<int> index)
     -> shared_ptr<RuleRequest> {
   static constexpr int button_space = 5;
 
   auto *fac = getFactory();
   YDialog *dialog = fac->createPopupDialog();
 
-  auto request = std::make_shared<RuleRequest>();
-  request->matches_.emplace_back();
+  shared_ptr<RuleRequest> request;
+  if (index.has_value()) { /* update dialog */
+    request = firewall_backend_->getRule(firewall_context_, index.value());
+  } else { /* insert dialog */
+    request = std::make_shared<RuleRequest>();
+  }
+
+  if (request->matches_.empty()) {
+    request->matches_.emplace_back(); /* if not filled, remove before return */
+  }
 
   YLayoutBox *vbox = fac->createVBox(dialog);
 
-  if (origin == nullptr) {
+  const string kUpdateRuleDialogTitle = "Update Firewall Rule";
+  const string kInsertRuleDialogTitle = "Insert Firewall Rule";
+  if (index == std::nullopt) {
     auto *title = fac->createLabel(vbox, kInsertRuleDialogTitle);
     title->autoWrap();
   } else {
@@ -361,16 +358,22 @@ auto FirewallConfig::createUpdateRule(const ipt_entry *origin) // NOLINT
   {
     /* Line 1: position, protocol and target */
     auto *hbox = fac->createHBox(vbox);
-    auto rule_num = static_cast<int>(
-        firewall_backend_->getSubconfigs(firewall_context_).size());
 
-    auto text = "Rule position (1-" + std::to_string(rule_num + 1) + ")";
-    auto *pos_input = fac->createIntField(hbox, text, 1, rule_num + 1, 1);
-    widget_targets.emplace_back(pos_input, [pos_input, &request]() {
-      auto *widget = dynamic_cast<YIntField *>(pos_input);
-      request->index_ = widget->value();
-      return true;
-    });
+    /* for update dialog, user cannot modify rule_num */
+    if (index.has_value()) {
+      auto text = fmt::format("Rule to update: #{}", index.value());
+      fac->createLabel(hbox, text);
+    } else {
+      auto rule_num = static_cast<int>(
+          firewall_backend_->getFirewallChildren(firewall_context_).size());
+      auto text = fmt::format("Rule #(1-{})", rule_num);
+      auto *pos_input = fac->createIntField(hbox, text, 1, rule_num + 1, 1);
+      widget_targets.emplace_back(pos_input, [pos_input, &request]() {
+        auto *widget = dynamic_cast<YIntField *>(pos_input);
+        request->index_ = widget->value();
+        return true;
+      });
+    }
 
     auto ptcs = protocols();
     YComboBox *proto_box = fac->createComboBox(hbox, "Protocol");
@@ -379,6 +382,9 @@ auto FirewallConfig::createUpdateRule(const ipt_entry *origin) // NOLINT
       items.push_back(new YItem(get<0>(ptc)));
     }
     proto_box->addItems(items);
+    if (index.has_value()) {
+      proto_box->setValue(request->proto_);
+    }
     widget_targets.emplace_back(proto_box, [proto_box, &request]() {
       auto *widget = dynamic_cast<YComboBox *>(proto_box);
       auto *item = widget->selectedItem();
@@ -395,6 +401,13 @@ auto FirewallConfig::createUpdateRule(const ipt_entry *origin) // NOLINT
       target_items.push_back(new YItem(target));
     }
     target_box->addItems(target_items);
+    if (index.has_value() &&
+        std::any_of(iptables_targets.begin(), iptables_targets.end(),
+                    [request](const string &target) {
+                      return target == request->target_;
+                    })) {
+      target_box->setValue(request->target_);
+    }
     widget_targets.emplace_back(target_box, [target_box, &request]() {
       auto *widget = dynamic_cast<YComboBox *>(target_box);
       auto *item = widget->selectedItem();
@@ -407,6 +420,7 @@ auto FirewallConfig::createUpdateRule(const ipt_entry *origin) // NOLINT
 
   /* Line 2/3: source/dest addr and mask */
   constexpr int kIPMaxLen = 15;
+  static const string kFFMask = "255.255.255.255";
   auto ip_input = [&](const string &target, optional<string> &addr_target,
                       optional<string> &mask_target) {
     auto *frame = YUI::widgetFactory()->createCheckBoxFrame(
@@ -416,10 +430,18 @@ auto FirewallConfig::createUpdateRule(const ipt_entry *origin) // NOLINT
       auto *hbox = fac->createHBox(frame);
       auto *addr = fac->createInputField(hbox, target + " Address");
       addr->setInputMaxLength(kIPMaxLen);
+      if (index.has_value() && addr_target.has_value()) {
+        addr->setValue(addr_target.value());
+      }
 
       auto *mask = fac->createInputField(hbox, target + " Mask");
       mask->setInputMaxLength(kIPMaxLen);
-      mask->setValue("255.255.255.255");
+      if (index.has_value() && mask_target.has_value()) {
+        mask->setValue(mask_target.value());
+      } else {
+        mask_target = kFFMask;
+        mask->setValue(kFFMask);
+      }
 
       widget_targets.emplace_back(
           frame, [frame, addr, mask, &addr_target, &mask_target]() {
@@ -444,6 +466,9 @@ auto FirewallConfig::createUpdateRule(const ipt_entry *origin) // NOLINT
     auto *frame =
         YUI::widgetFactory()->createCheckBoxFrame(vbox, "Iniface", false);
     auto *iface = fac->createInputField(frame, "");
+    if (index.has_value() && request->iniface_.has_value()) {
+      iface->setValue(request->iniface_.value());
+    }
 
     widget_targets.emplace_back(frame, [frame, iface, &request]() {
       auto *widget = dynamic_cast<YCheckBoxFrame *>(frame);
@@ -458,6 +483,9 @@ auto FirewallConfig::createUpdateRule(const ipt_entry *origin) // NOLINT
     auto *frame =
         YUI::widgetFactory()->createCheckBoxFrame(vbox, "Outiface", false);
     auto *iface = fac->createInputField(frame, "");
+    if (index.has_value() && request->outiface_.has_value()) {
+      iface->setValue(request->outiface_.value());
+    }
 
     widget_targets.emplace_back(frame, [frame, iface, &request]() {
       auto *widget = dynamic_cast<YCheckBoxFrame *>(frame);
@@ -483,6 +511,11 @@ auto FirewallConfig::createUpdateRule(const ipt_entry *origin) // NOLINT
                                        kPortMax, kPortMin);
       auto *to = fac->createIntField(hbox, target + " to", kPortMin, kPortMax,
                                      kPortMax);
+      if (index.has_value() && port_target.has_value()) {
+        auto [from_str, to_str] = port_target.value();
+        from->setValue(std::stoi(from_str));
+        to->setValue(std::stoi(to_str));
+      }
 
       widget_targets.emplace_back(frame, [frame, from, to, &port_target,
                                           &request]() {

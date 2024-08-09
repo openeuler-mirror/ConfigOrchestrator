@@ -35,12 +35,12 @@ public:
   [[nodiscard]] auto getPageName() const -> string override;
 
 private:
-  auto userDisplay(YDialog *main_dialog, DisplayLayout layout)
-      -> DisplayResult override;
+  auto userDisplay(YDialog *main_dialog,
+                   DisplayLayout layout) -> DisplayResult override;
 
   auto userHandleEvent(YEvent *event) -> HandleResult override;
 
-  auto createUpdateRule(const ipt_entry *origin) -> shared_ptr<RuleRequest>;
+  auto createUpdateRule(optional<int> index) -> shared_ptr<RuleRequest>;
 
   auto createChain() -> shared_ptr<ChainRequest>;
 
@@ -57,8 +57,6 @@ private:
   const static string kAddChainButtonText;
   const static string kDelRuleButtonText;
   const static string kDelChainButtonText;
-  const static string kUpdateRuleDialogTitle;
-  const static string kInsertRuleDialogTitle;
 };
 
 #endif
