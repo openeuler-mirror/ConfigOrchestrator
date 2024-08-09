@@ -1,4 +1,6 @@
 #include "backend/firewall/firewall_backend.h"
+#include "backend/firewall/rule_request.h"
+#include "fmt/core.h"
 #include "tools/iptools.h"
 #include "tools/log.h"
 
@@ -36,6 +38,13 @@ auto FirewallBackend::createHandlers() -> bool {
     return true;
   });
 }
+
+auto FirewallBackend::getTableNames() -> vector<string> {
+  const static vector<string> tables = {"filter", "nat", "mangle", "raw",
+                                        "security"};
+
+  return tables;
+};
 
 auto FirewallBackend::destroyHandlers() -> bool {
   if (std::ranges::all_of(handles_, [](const auto &pair) {
@@ -78,8 +87,8 @@ auto FirewallBackend::apply() -> function<bool()> {
   };
 }
 
-auto FirewallBackend::getSubconfigs(const shared_ptr<FirewallContext> &context)
-    -> vector<string> {
+auto FirewallBackend::getFirewallChildren(
+    const shared_ptr<FirewallContext> &context) -> vector<string> {
   vector<string> subconfigs;
 
   switch (context->level_) {
@@ -100,8 +109,8 @@ auto FirewallBackend::getSubconfigs(const shared_ptr<FirewallContext> &context)
   return subconfigs;
 }
 
-auto FirewallBackend::getDetailedRule(const ctx_t &context,
-                                      int index) -> string {
+auto FirewallBackend::getRuleDetails(const ctx_t &context,
+                                     int index) -> string {
   auto *handle = handles_.at(context->table_);
   auto chain = context->chain_;
   const auto *rule = iptc_first_rule(chain.c_str(), handle);
@@ -160,6 +169,18 @@ auto FirewallBackend::getRules(const ctx_t &context)
   return rules;
 }
 
+auto FirewallBackend::getRule(const ctx_t &context,
+                              int index) -> shared_ptr<RuleRequest> {
+  auto *handle = handles_.at(context->table_);
+  auto chain = context->chain_;
+  const auto *rule = iptc_first_rule(chain.c_str(), handle);
+  for (int i = 0; i < index; i++) {
+    rule = iptc_next_rule(rule, handle);
+  }
+
+  return std::make_shared<RuleRequest>(rule, index);
+}
+
 auto FirewallBackend::removeChain(const ctx_t &context) -> bool {
   if (context->level_ == FirewallLevel::CHAIN) {
     return iptc_delete_chain(context->chain_.c_str(),
@@ -190,145 +211,79 @@ auto FirewallBackend::removeRule(const ctx_t &context, int index) -> bool {
   return true;
 }
 
-auto FirewallBackend::addRule(const ctx_t &context,
-                              const shared_ptr<RuleRequest> &request) -> bool {
-  static constexpr int kIPTEntrySize = XT_ALIGN(sizeof(struct ipt_entry));
-  static constexpr int kTCPMatchSize =
-      XT_ALIGN(sizeof(struct ipt_entry_match) + sizeof(struct ipt_tcp));
-  static constexpr int kUDPMatchSize =
-      XT_ALIGN(sizeof(struct ipt_entry_match) + sizeof(struct ipt_udp));
-  static constexpr int kIPTEntryTargetSize =
-      XT_ALIGN(sizeof(struct ipt_entry_target)) + XT_ALIGN(sizeof(int));
-  static constexpr int kMatchSize = kTCPMatchSize;
-  static constexpr int kByteMask = 0xFF;
-  static constexpr int max_port = 0xFFFF;
-
-  static_assert(
-      kTCPMatchSize == kUDPMatchSize,
-      "reconsider the code iff tcp and udp match sizes are different");
-
+auto FirewallBackend::updateRule(const ctx_t &context,
+                                 const shared_ptr<RuleRequest> &request,
+                                 int index) -> bool {
   if (context->level_ != FirewallLevel::CHAIN) {
-    yuiError() << "Cannot add rule to table over chain" << endl;
+    context->setLastError("Cannot update rule over table.");
     return false;
   }
 
-  auto *handle = handles_.at(context->table_);
   ipt_chainlabel chain;
+  auto *handle = handles_.at(context->table_);
   strncpy(chain, context->chain_.c_str(), sizeof(ipt_chainlabel));
 
-  /* calculate size of the entry */
-  auto matches_number = static_cast<int>(request->matches_.size());
-  auto size = kIPTEntrySize + kIPTEntryTargetSize + kMatchSize * matches_number;
-
-  std::vector<char> entry_buffer(size, 0);
-  auto *entry = reinterpret_cast<struct ipt_entry *>(entry_buffer.data());
-  auto *target_entry = reinterpret_cast<struct ipt_entry_target *>(
-      entry_buffer.data() + kIPTEntrySize +
-      static_cast<long>(kMatchSize * matches_number));
-
-  /* Part I: ipt_entry */
-  entry->next_offset = size;
-  entry->target_offset = kIPTEntrySize + kMatchSize * matches_number;
-
-  if (request->proto_ == RequestProto::TCP) {
-    entry->ip.proto = IPPROTO_TCP;
-  } else if (request->proto_ == RequestProto::UDP) {
-    entry->ip.proto = IPPROTO_UDP;
-  } else {
-    yuiError() << "Unknown protocol: " << request->proto_ << endl;
-    return false;
-  }
-
-  /* src/dst ip and mask */
-  auto setIp = [](const optional<string> &ip, struct in_addr &target) {
-    if (ip.has_value()) {
-      target.s_addr = inet_addr(ip->c_str());
-    }
-  };
-  setIp(request->src_ip_, entry->ip.src);
-  setIp(request->src_mask_, entry->ip.smsk);
-  setIp(request->dst_ip_, entry->ip.dst);
-  setIp(request->dst_mask_, entry->ip.dmsk);
-
-  /* iface */
-  if (request->iniface_.has_value()) {
-    strncpy(entry->ip.iniface, request->iniface_->c_str(), IFNAMSIZ);
-    memset(entry->ip.iniface_mask, kByteMask, request->iniface_->size() + 1);
-  }
-  if (request->outiface_.has_value()) {
-    strncpy(entry->ip.outiface, request->outiface_->c_str(), IFNAMSIZ);
-    memset(entry->ip.outiface_mask, kByteMask, request->outiface_->size() + 1);
-  }
-
-  /* we cannot use array here, assert no overflow todo */
-  auto setPortRange = [](const optional<tuple<string, string>> &range,
-                         __u16 *target) {
-    if (range.has_value()) {
-      target[0] = static_cast<__u16>(stoi(get<0>(range.value())));
-      target[1] = static_cast<__u16>(stoi(get<1>(range.value())));
-    } else {
-      target[0] = 0;
-      target[1] = max_port;
-    }
-  };
-
-  for (int i = 0; i < request->matches_.size(); i++) {
-    if (request->proto_ == RequestProto::TCP) {
-      auto *match = reinterpret_cast<struct ipt_entry_match *>(
-          entry->elems + static_cast<ptrdiff_t>(i * kTCPMatchSize));
-
-      match->u.user.match_size = kTCPMatchSize;
-      strncpy(match->u.user.name, "tcp", IPT_FUNCTION_MAXNAMELEN);
-
-      auto *tcp = reinterpret_cast<struct ipt_tcp *>(match->data);
-      setPortRange(request->matches_[i].src_port_range_, tcp->spts);
-      setPortRange(request->matches_[i].dst_port_range_, tcp->dpts);
-    } else if (request->proto_ == RequestProto::UDP) {
-      auto *match = reinterpret_cast<struct ipt_entry_match *>(
-          entry->elems + static_cast<ptrdiff_t>(i * kUDPMatchSize));
-
-      match->u.user.match_size = kUDPMatchSize;
-      strncpy(match->u.user.name, "udp", IPT_FUNCTION_MAXNAMELEN);
-
-      auto *udp = reinterpret_cast<struct ipt_udp *>(match->data);
-      setPortRange(request->matches_[i].src_port_range_, udp->spts);
-      setPortRange(request->matches_[i].dst_port_range_, udp->dpts);
-    }
-  }
-
-  /* Part III: target */
-  target_entry->u.user.target_size = kIPTEntryTargetSize;
-  if (request->target_.empty() ||
-      std::any_of(iptTargets().begin(), iptTargets().end(),
-                  [&request](const auto &target) {
-                    return target == request->target_;
-                  })) {
-    strncpy(target_entry->u.user.name, request->target_.c_str(),
-            sizeof(target_entry->u.user.name));
-  }
-
-  /* insert it */
-  if (request->index_ > getSubconfigs(context).size()) {
-    if (iptc_append_entry(chain, entry, handle) == 0) {
-      yuiError() << "Error adding rule: " << iptc_strerror(errno) << endl;
+  if (auto entry_buffer = request->to_entry_bytes(context)) {
+    auto *entry = reinterpret_cast<struct ipt_entry *>(entry_buffer->data());
+    if (iptc_replace_entry(chain, entry, request->index_, handle) == 0) {
+      context->setLastError(
+          fmt::format("Error update rule, reason: {}\n", iptc_strerror(errno)));
       return false;
     }
-  } else if (iptc_insert_entry(chain, entry, request->index_, handle) == 0) {
-    std::cerr << "Error adding rule: " << iptc_strerror(errno) << std::endl;
+  } else {
+    context->setLastError(fmt::format("Error creating rule entry, reason: {}",
+                                      context->getLastError()));
     return false;
   }
 
   return true;
 }
 
-auto FirewallBackend::addChain(
+auto FirewallBackend::insertRule(
+    const ctx_t &context, const shared_ptr<RuleRequest> &request) -> bool {
+
+  if (context->level_ != FirewallLevel::CHAIN) {
+    context->setLastError(fmt::format("Cannot add rule to table over chain.\n",
+                                      iptc_strerror(errno)));
+    return false;
+  }
+
+  ipt_chainlabel chain;
+  auto *handle = handles_.at(context->table_);
+  strncpy(chain, context->chain_.c_str(), sizeof(ipt_chainlabel));
+
+  /* insert it */
+  if (auto entry_buffer = request->to_entry_bytes(context)) {
+    auto *entry = reinterpret_cast<struct ipt_entry *>(entry_buffer->data());
+    if (request->index_ > getFirewallChildren(context).size()) {
+      if (iptc_append_entry(chain, entry, handle) == 0) {
+        context->setLastError(fmt::format("Error insert rule, reason: {}\n",
+                                          iptc_strerror(errno)));
+        return false;
+      }
+    } else if (iptc_insert_entry(chain, entry, request->index_, handle) == 0) {
+      context->setLastError(
+          fmt::format("Error insert rule, reason: {}\n", iptc_strerror(errno)));
+      return false;
+    }
+  } else {
+    context->setLastError(fmt::format("Error creating rule entry, reason: {}",
+                                      context->getLastError()));
+    return false;
+  }
+
+  return true;
+}
+
+auto FirewallBackend::insertChain(
     const ctx_t &context, const shared_ptr<ChainRequest> &request) -> bool {
   auto *handle = handles_.at(context->table_);
   ipt_chainlabel chain;
   strncpy(chain, request->chain_name_.c_str(), sizeof(ipt_chainlabel));
 
   if (iptc_create_chain(chain, handle) == 0) {
-    yuiError() << "Error creating chain: " << iptc_strerror(errno) << endl;
+    context->setLastError(
+        fmt::format("Error creating chain: {}\n", iptc_strerror(errno)));
     return false;
   }
 
@@ -411,14 +366,17 @@ auto FirewallBackend::serializeShortRule(const struct ipt_entry *rule)
       result += fmt::format(", DST PORT: {}-{}", dsts.first, dsts.second);
     }
 
-    if (rule->target_offset != rule->next_offset) {
-      const auto *target = reinterpret_cast<const ipt_entry_target *>(
-          reinterpret_cast<const char *>(rule) + rule->target_offset);
-      result += fmt::format(" | {}\n", target->u.user.name);
-    }
-
     match = reinterpret_cast<const ipt_entry_match *>(
         reinterpret_cast<const char *>(match) + match->u.match_size);
+  }
+
+  if (rule->target_offset != rule->next_offset) {
+    const auto *target = reinterpret_cast<const ipt_entry_target *>(
+        reinterpret_cast<const char *>(rule) + rule->target_offset);
+    auto target_name = fmt::to_string(target->u.user.name);
+    if (!target_name.empty()) {
+      result += fmt::format(" | {}\n", target_name);
+    }
   }
 
   return result;

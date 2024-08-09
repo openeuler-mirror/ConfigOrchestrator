@@ -5,9 +5,9 @@
 #include "libiptc/libiptc.h"
 
 #include "backend/config_backend_base.h"
+#include "backend/firewall/chain_request.h"
 #include "backend/firewall/firewall_context.h"
-#include "frontend/firewall/chain_request.h"
-#include "frontend/firewall/rule_request.h"
+#include "backend/firewall/rule_request.h"
 #include "tools/log.h"
 #include "tools/sys.h"
 
@@ -35,32 +35,36 @@ public:
 
   ~FirewallBackend() override;
 
+  /**
+   * As backend, we need to implement the following functions:
+   */
   auto apply() -> function<bool()>;
 
-  static auto getTableNames() -> vector<string> {
-    static vector<string> tables = {"filter"};
-
-    return tables;
-  };
-
-  auto getSubconfigs(const ctx_t &context) -> vector<string>;
-
-  auto getDetailedRule(const ctx_t &context, int index) -> string;
+  /*
+   * get all firewall tables statically
+   */
+  static auto getTableNames() -> vector<string>;
 
   static auto createContext(const ctx_t &current, const string &name) -> ctx_t;
 
-  /* remove chain when level is chain, rule when level is rule
-   * return false when other level call this function
-   */
+  auto getFirewallChildren(const ctx_t &context) -> vector<string>;
+
+  auto getRuleDetails(const ctx_t &context, int index) -> string;
+
   auto removeChain(const ctx_t &context) -> bool;
+
+  auto insertChain(const ctx_t &context,
+                   const shared_ptr<ChainRequest> &request) -> bool;
 
   auto removeRule(const ctx_t &context, int index) -> bool;
 
-  auto addRule(const ctx_t &context,
-               const shared_ptr<RuleRequest> &request) -> bool;
+  auto insertRule(const ctx_t &context,
+                  const shared_ptr<RuleRequest> &request) -> bool;
 
-  auto addChain(const ctx_t &context,
-                const shared_ptr<ChainRequest> &request) -> bool;
+  auto updateRule(const ctx_t &context, const shared_ptr<RuleRequest> &request,
+                  int index) -> bool;
+
+  auto getRule(const ctx_t &context, int index) -> shared_ptr<RuleRequest>;
 
 private:
   unordered_map<string, struct iptc_handle *> handles_;
@@ -69,6 +73,9 @@ private:
 
   auto getRules(const ctx_t &context) -> vector<const struct ipt_entry *>;
 
+  /**
+   * iptc handlers need freshed after committing
+   */
   auto createHandlers() -> bool;
 
   auto destroyHandlers() -> bool;
@@ -77,6 +84,10 @@ private:
   static auto serializeRule(const struct ipt_entry *rule) -> string;
 
   static auto serializeShortRule(const struct ipt_entry *rule) -> string;
+
+  /**
+   * tool func for fronetend-backend conversion
+   */
 };
 
 #endif
