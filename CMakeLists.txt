@@ -74,6 +74,7 @@ set(BACK_SOURCES
     ${CMAKE_SOURCE_DIR}/src/backend/config_manager.cc
 
     ${CMAKE_SOURCE_DIR}/src/backend/firewall/firewall_backend.cc
+    ${CMAKE_SOURCE_DIR}/src/backend/firewall/rule_request.cc
 
     ${CMAKE_SOURCE_DIR}/src/backend/package_manager/package_manager_backend.cc
 )

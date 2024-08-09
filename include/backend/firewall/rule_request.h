@@ -1,6 +1,8 @@
 #ifndef RULE_REQUEST_H
 #define RULE_REQUEST_H
 
+#include "backend/firewall/firewall_context.h"
+
 #include <optional>
 #include <string>
 #include <tuple>
@@ -43,7 +45,7 @@ public:
 
   string target_;
 
-  RuleRequest() : proto_(RequestProto::TCP), target_(IPTC_LABEL_ACCEPT){};
+  RuleRequest() : proto_(RequestProto::TCP), target_(IPTC_LABEL_ACCEPT) {};
 
   RuleRequest(int index, optional<string> src_ip, optional<string> src_mask,
               optional<string> dst_ip, optional<string> dst_mask, string proto,
@@ -54,6 +56,10 @@ public:
         dst_mask_(std::move(dst_mask)), proto_(std::move(proto)),
         iniface_(std::move(iniface)), outiface_(std::move(outiface)),
         matches_(std::move(matches)), target_(std::move(target)) {}
+
+  RuleRequest(const struct ipt_entry *rule, int index);
+
+  auto to_entry_bytes(const ctx_t &context) -> optional<vector<char>>;
 };
 
 #endif
