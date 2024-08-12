@@ -425,6 +425,7 @@ auto FirewallConfig::createUpdateRule(optional<int> index)
                       optional<string> &mask_target) {
     auto *frame = YUI::widgetFactory()->createCheckBoxFrame(
         vbox, target + " Address / Mask", false);
+    frame->setAutoEnable(true); /* if frame is enabled, child set enabled */
 
     {
       auto *hbox = fac->createHBox(frame);
@@ -444,9 +445,8 @@ auto FirewallConfig::createUpdateRule(optional<int> index)
       }
 
       widget_targets.emplace_back(
-          frame, [frame, addr, mask, &addr_target, &mask_target]() {
-            auto *widget = dynamic_cast<YCheckBoxFrame *>(frame);
-            if (widget->isEnabled()) {
+          frame, [hbox, addr, mask, &addr_target, &mask_target]() {
+            if (hbox->isEnabled()) {
               auto *addr_widget = dynamic_cast<YInputField *>(addr);
               addr_target = addr_widget->value();
 
@@ -465,14 +465,15 @@ auto FirewallConfig::createUpdateRule(optional<int> index)
   {
     auto *frame =
         YUI::widgetFactory()->createCheckBoxFrame(vbox, "Iniface", false);
+    frame->setAutoEnable(true);
+
     auto *iface = fac->createInputField(frame, "");
     if (index.has_value() && request->iniface_.has_value()) {
       iface->setValue(request->iniface_.value());
     }
 
-    widget_targets.emplace_back(frame, [frame, iface, &request]() {
-      auto *widget = dynamic_cast<YCheckBoxFrame *>(frame);
-      if (widget->isEnabled()) {
+    widget_targets.emplace_back(frame, [iface, &request]() {
+      if (iface->isEnabled()) {
         auto *iface_widget = dynamic_cast<YInputField *>(iface);
         request->iniface_ = iface_widget->value();
       }
@@ -482,14 +483,15 @@ auto FirewallConfig::createUpdateRule(optional<int> index)
   {
     auto *frame =
         YUI::widgetFactory()->createCheckBoxFrame(vbox, "Outiface", false);
+    frame->setAutoEnable(true);
+
     auto *iface = fac->createInputField(frame, "");
     if (index.has_value() && request->outiface_.has_value()) {
       iface->setValue(request->outiface_.value());
     }
 
-    widget_targets.emplace_back(frame, [frame, iface, &request]() {
-      auto *widget = dynamic_cast<YCheckBoxFrame *>(frame);
-      if (widget->isEnabled()) {
+    widget_targets.emplace_back(frame, [iface, &request]() {
+      if (iface->isEnabled()) {
         auto *iface_widget = dynamic_cast<YInputField *>(iface);
         request->outiface_ = iface_widget->value();
       }
@@ -505,6 +507,7 @@ auto FirewallConfig::createUpdateRule(optional<int> index)
                           optional<tuple<string, string>> &port_target) {
       auto *frame = YUI::widgetFactory()->createCheckBoxFrame(
           vbox, target + " Port", false);
+      frame->setAutoEnable(true);
 
       auto *hbox = fac->createHBox(frame);
       auto *from = fac->createIntField(hbox, target + " from", kPortMin,
@@ -517,10 +520,9 @@ auto FirewallConfig::createUpdateRule(optional<int> index)
         to->setValue(std::stoi(to_str));
       }
 
-      widget_targets.emplace_back(frame, [frame, from, to, &port_target,
+      widget_targets.emplace_back(frame, [hbox, from, to, &port_target,
                                           &request]() {
-        auto *widget = dynamic_cast<YCheckBoxFrame *>(frame);
-        if (widget->isEnabled()) {
+        if (hbox->isEnabled()) {
           auto *to_widget = dynamic_cast<YIntField *>(to);
           auto *from_widget = dynamic_cast<YIntField *>(from);
 
