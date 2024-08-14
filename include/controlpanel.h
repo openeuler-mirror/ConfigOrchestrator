@@ -30,9 +30,11 @@
 #include <yui/YWidgetFactory.h>
 
 /**
- * SUCCESS: event has been handled
+ * @brief result of handling an event when call a widget's closure
+ *
+ * SUCCESS: event has been handled (note that not necessarily successful)
  * BREAK: event has been handled and break the event loop
- * EXIT: exit the program
+ * EXIT: event has been handled and exit the program
  * CONT: continue to the next event handler since event not handled
  */
 enum class HandleResult : unsigned int { SUCCESS, BREAK, EXIT, CONT };
