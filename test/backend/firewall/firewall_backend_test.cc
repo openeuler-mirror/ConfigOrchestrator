@@ -1,12 +1,17 @@
+#include <gtest/gtest-param-test.h>
 #include <gtest/gtest.h>
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <random>
 #include <string>
 #include <tuple>
+#include <vector>
 
 #include "backend/firewall/firewall_backend.h"
 #include "backend/firewall/firewall_context.h"
+#include "backend/firewall/rule_request.h"
+#include "tools/iptools.h"
 #include "tools/log.h"
 
 using std::cout;
@@ -16,30 +21,13 @@ using std::make_shared;
 using std::make_tuple;
 using std::nullopt;
 
-class FirewallTest : public ::testing::Test {
+class FirewallTestFixture : public ::testing::Test {
 protected:
-  void SetUp() override {
-    fwb = make_shared<FirewallBackend>();
-    write_context = make_shared<FirewallContext>();
-    write_context = fwb->createContext(write_context, write_table);
-    write_context = fwb->createContext(write_context, write_chain);
-
-    ASSERT_EQ(write_context->level_, FirewallLevel::CHAIN);
-    ASSERT_EQ(write_context->table_, write_table);
-    ASSERT_EQ(write_context->chain_, write_chain);
-
-    auto rules = fwb->getFirewallChildren(write_context);
-    rule_num = static_cast<int>(rules.size());
-  }
+  void SetUp() override { fwb = make_shared<FirewallBackend>(); }
 
   void TearDown() override {}
 
-  const string write_table = "filter";
-  const string write_chain = "INPUT";
-
-  int rule_num;
   shared_ptr<FirewallBackend> fwb;
-  shared_ptr<FirewallContext> write_context;
 };
 
 void TestChainContext(const shared_ptr<FirewallBackend> &fwb,
@@ -72,7 +60,7 @@ void TestTableContext(const shared_ptr<FirewallBackend> &fwb,
   }
 }
 
-TEST_F(FirewallTest, get_chain) {
+TEST_F(FirewallTestFixture, getChain) {
   auto ctx = make_shared<FirewallContext>();
   auto tables = fwb->getTableNames();
   for (const auto &table : tables) {
@@ -80,32 +68,289 @@ TEST_F(FirewallTest, get_chain) {
   }
 }
 
-TEST_F(FirewallTest, add_rule) {
-  // insert a rule
-  auto rule_request = make_shared<RuleRequest>(
-      1, make_optional<string>("10.201.0.238"),
-      make_optional<string>("255.255.255.255"), nullopt, nullopt,
-      RequestProto::UDP, nullopt, nullopt,
-      vector<RuleMatch>{
-          RuleMatch{nullopt, optional<tuple<string, string>>(
-                                 make_tuple<string, string>("22", "22"))}},
-      "ACCEPT");
+/* gtest param test for add/delete rule */
+struct FirewallTestAddDelRuleData {
+  FirewallTestAddDelRuleData(string a, string b,
+                             std::shared_ptr<RuleRequest> req)
+      : table(a), chain(b), rule_request(req) {}
 
-  ASSERT_TRUE(fwb->insertRule(write_context, rule_request));
+  string table;
+  string chain;
+
+  shared_ptr<RuleRequest> rule_request;
+};
+
+class FirewallTestAddDelRule
+    : public ::testing::TestWithParam<FirewallTestAddDelRuleData> {
+protected:
+  void SetUp() override {
+    fwb = make_shared<FirewallBackend>();
+    gen.seed(42);
+  }
+
+  void TearDown() override {}
+
+  shared_ptr<FirewallBackend> fwb;
+  std::mt19937 gen; // generate insert position
+};
+
+TEST_P(FirewallTestAddDelRule, AddThenDelRule) {
+  const auto &param = GetParam();
+
+  auto context = make_shared<FirewallContext>();
+  context = fwb->createContext(context, param.table);
+  context = fwb->createContext(context, param.chain);
+
+  ASSERT_EQ(context->level_, FirewallLevel::CHAIN);
+  ASSERT_EQ(context->table_, param.table);
+  ASSERT_EQ(context->chain_, param.chain);
+
+  auto rules = fwb->getFirewallChildren(context);
+  auto rule_num = static_cast<int>(rules.size());
+
+  // generate a random position
+  std::uniform_int_distribution<> dis(0, rule_num);
+  auto pos = dis(gen);
+  param.rule_request->index_ = pos;
+
+  ASSERT_TRUE(fwb->insertRule(context, param.rule_request));
+
+  rules = fwb->getFirewallChildren(context);
+  ASSERT_EQ(rule_num + 1, static_cast<int>(rules.size()));
+
+  for (int i = 0; i <= rule_num; i++) {
+    auto rule = fwb->getRule(context, i);
+    ASSERT_NE(rule, nullptr);
+    ASSERT_EQ(rule->index_, i);
+
+    if (i == param.rule_request->index_) {
+      ASSERT_EQ(rule->proto_, param.rule_request->proto_);
+      ASSERT_EQ(rule->target_, param.rule_request->target_);
+
+      ASSERT_TRUE(rule->src_mask_.has_value());
+      ASSERT_TRUE(rule->dst_mask_.has_value());
+      ASSERT_TRUE(rule->src_ip_.has_value());
+      ASSERT_TRUE(rule->dst_ip_.has_value());
+
+      if (param.rule_request->src_ip_.has_value()) {
+        ASSERT_EQ(rule->src_ip_.value(), param.rule_request->src_ip_.value());
+      } else {
+        ASSERT_EQ(rule->src_ip_.value(), "0.0.0.0");
+      }
+      if (param.rule_request->dst_ip_.has_value()) {
+        ASSERT_EQ(rule->dst_ip_.value(), param.rule_request->dst_ip_.value());
+      } else {
+        ASSERT_EQ(rule->dst_ip_.value(), "0.0.0.0");
+      }
+
+      if (param.rule_request->src_mask_.has_value()) {
+        ASSERT_EQ(rule->src_mask_.value(),
+                  param.rule_request->src_mask_.value());
+      } else {
+        ASSERT_EQ(rule->src_mask_.value(), "255.255.255.255");
+      }
+
+      if (param.rule_request->dst_mask_.has_value()) {
+        ASSERT_EQ(rule->dst_mask_.value(),
+                  param.rule_request->dst_mask_.value());
+      } else {
+        ASSERT_EQ(rule->dst_mask_.value(), "255.255.255.255");
+      }
+
+      ASSERT_EQ(rule->matches_.size(), param.rule_request->matches_.size());
+      if (rule->matches_.size() > 0) {
+        ASSERT_TRUE(rule->matches_[0].dst_port_range_.has_value());
+        ASSERT_TRUE(rule->matches_[0].src_port_range_.has_value());
+
+        if (param.rule_request->matches_[0].src_port_range_.has_value()) {
+          ASSERT_EQ(rule->matches_[0].src_port_range_.value(),
+                    param.rule_request->matches_[0].src_port_range_.value());
+        } else {
+          ASSERT_EQ(rule->matches_[0].src_port_range_.value(),
+                    make_tuple("0", "65535"));
+        }
+
+        if (param.rule_request->matches_[0].dst_port_range_.has_value()) {
+          ASSERT_EQ(rule->matches_[0].dst_port_range_.value(),
+                    param.rule_request->matches_[0].dst_port_range_.value());
+        } else {
+          ASSERT_EQ(rule->matches_[0].dst_port_range_.value(),
+                    make_tuple("0", "65535"));
+        }
+      }
+
+      ASSERT_EQ(rule->iniface_.has_value(),
+                param.rule_request->iniface_.has_value());
+      if (rule->iniface_.has_value()) {
+        ASSERT_EQ(rule->iniface_.value(), param.rule_request->iniface_.value());
+      }
+      ASSERT_EQ(rule->outiface_.has_value(),
+                param.rule_request->outiface_.has_value());
+      if (rule->outiface_.has_value()) {
+        ASSERT_EQ(rule->outiface_.value(),
+                  param.rule_request->outiface_.value());
+      }
+    }
+  }
 
   auto commit = fwb->apply();
   ASSERT_TRUE(commit());
 
-  auto rules = fwb->getFirewallChildren(write_context);
-  ASSERT_EQ(rule_num + 1, static_cast<int>(rules.size()));
+  // after commit, the rule should be saved
+  {
+    auto new_fwb = make_shared<FirewallBackend>();
+    rules = new_fwb->getFirewallChildren(context);
+    ASSERT_EQ(rule_num + 1, static_cast<int>(rules.size()));
+
+    for (int i = 0; i <= rule_num; i++) {
+      auto rule = new_fwb->getRule(context, i);
+      ASSERT_NE(rule, nullptr);
+      ASSERT_EQ(rule->index_, i);
+
+      if (i == param.rule_request->index_) {
+        ASSERT_EQ(rule->proto_, param.rule_request->proto_);
+        ASSERT_EQ(rule->target_, param.rule_request->target_);
+
+        ASSERT_TRUE(rule->src_mask_.has_value());
+        ASSERT_TRUE(rule->dst_mask_.has_value());
+        ASSERT_TRUE(rule->src_ip_.has_value());
+        ASSERT_TRUE(rule->dst_ip_.has_value());
+
+        if (param.rule_request->src_ip_.has_value()) {
+          ASSERT_EQ(rule->src_ip_.value(), param.rule_request->src_ip_.value());
+        } else {
+          ASSERT_EQ(rule->src_ip_.value(), "0.0.0.0");
+        }
+        if (param.rule_request->dst_ip_.has_value()) {
+          ASSERT_EQ(rule->dst_ip_.value(), param.rule_request->dst_ip_.value());
+        } else {
+          ASSERT_EQ(rule->dst_ip_.value(), "0.0.0.0");
+        }
+
+        if (param.rule_request->src_mask_.has_value()) {
+          ASSERT_EQ(rule->src_mask_.value(),
+                    param.rule_request->src_mask_.value());
+        } else {
+          ASSERT_EQ(rule->src_mask_.value(), "255.255.255.255");
+        }
+
+        if (param.rule_request->dst_mask_.has_value()) {
+          ASSERT_EQ(rule->dst_mask_.value(),
+                    param.rule_request->dst_mask_.value());
+        } else {
+          ASSERT_EQ(rule->dst_mask_.value(), "255.255.255.255");
+        }
+
+        ASSERT_EQ(rule->matches_.size(), param.rule_request->matches_.size());
+        if (rule->matches_.size() > 0) {
+          ASSERT_TRUE(rule->matches_[0].dst_port_range_.has_value());
+          ASSERT_TRUE(rule->matches_[0].src_port_range_.has_value());
+
+          if (param.rule_request->matches_[0].src_port_range_.has_value()) {
+            ASSERT_EQ(rule->matches_[0].src_port_range_.value(),
+                      param.rule_request->matches_[0].src_port_range_.value());
+          } else {
+            ASSERT_EQ(rule->matches_[0].src_port_range_.value(),
+                      make_tuple("0", "65535"));
+          }
+
+          if (param.rule_request->matches_[0].dst_port_range_.has_value()) {
+            ASSERT_EQ(rule->matches_[0].dst_port_range_.value(),
+                      param.rule_request->matches_[0].dst_port_range_.value());
+          } else {
+            ASSERT_EQ(rule->matches_[0].dst_port_range_.value(),
+                      make_tuple("0", "65535"));
+          }
+        }
+
+        ASSERT_EQ(rule->iniface_.has_value(),
+                  param.rule_request->iniface_.has_value());
+        if (rule->iniface_.has_value()) {
+          ASSERT_EQ(rule->iniface_.value(),
+                    param.rule_request->iniface_.value());
+        }
+        ASSERT_EQ(rule->outiface_.has_value(),
+                  param.rule_request->outiface_.has_value());
+        if (rule->outiface_.has_value()) {
+          ASSERT_EQ(rule->outiface_.value(),
+                    param.rule_request->outiface_.value());
+        }
+      }
+    }
+  }
 
   // remove the rule
-  ASSERT_TRUE(fwb->removeRule(write_context, 0));
-  ASSERT_TRUE(commit());
+  ASSERT_TRUE(fwb->removeRule(context, pos));
 
-  rules = fwb->getFirewallChildren(write_context);
+  rules = fwb->getFirewallChildren(context);
   ASSERT_EQ(rule_num, static_cast<int>(rules.size()));
+  for (int i = 0; i < rule_num; i++) {
+    auto rule = fwb->getRule(context, i);
+    ASSERT_NE(rule, nullptr);
+    ASSERT_EQ(rule->index_, i);
+  }
+
+  ASSERT_TRUE(commit());
+  {
+    auto new_fwb = make_shared<FirewallBackend>();
+    rules = new_fwb->getFirewallChildren(context);
+    ASSERT_EQ(rule_num, static_cast<int>(rules.size()));
+
+    for (int i = 0; i < rule_num; i++) {
+      auto rule = new_fwb->getRule(context, i);
+      ASSERT_NE(rule, nullptr);
+      ASSERT_EQ(rule->index_, i);
+    }
+  }
 }
+
+vector<FirewallTestAddDelRuleData> GenerateRandomTestData(size_t count) {
+  vector<FirewallTestAddDelRuleData> data;
+  std::mt19937 gen{42};
+
+  static const auto tables = FirewallBackend::getTableNames();
+  static const auto targets = iptTargets();
+  static const auto protos = protocols();
+
+  static const vector<string> chains = {"INPUT", "OUTPUT"};
+
+  for (size_t i = 0; i < count; ++i) {
+    std::uniform_int_distribution<int> dist(1, 100);
+  }
+
+  return data;
+}
+
+std::vector<FirewallTestAddDelRuleData> testDFirewallTestAddDelRuleInstantData =
+    GenerateRandomTestData(1000);
+
+INSTANTIATE_TEST_CASE_P(
+    FirewallTestAddDelRuleFuzzingInstant, FirewallTestAddDelRule,
+    ::testing::ValuesIn(testDFirewallTestAddDelRuleInstantData));
+
+INSTANTIATE_TEST_CASE_P(
+    FirewallTestAddDelRuleInstant, FirewallTestAddDelRule,
+    ::testing::Values(
+        FirewallTestAddDelRuleData(
+            "filter", "INPUT",
+            make_shared<RuleRequest>(
+                0, make_optional<string>("1.2.3.4"),
+                make_optional<string>("255.255.255.1"), nullopt, nullopt,
+                RequestProto::UDP, make_optional<string>("eth1"), nullopt,
+                vector<RuleMatch>{
+                    {nullopt, make_optional(make_tuple("12", "145"))}},
+                "ACCEPT")),
+        FirewallTestAddDelRuleData(
+            "filter", "INPUT",
+            make_shared<RuleRequest>(
+                0, make_optional<string>("89.31.112.2"),
+                make_optional<string>("255.255.255.1"),
+                make_optional<string>("89.31.112.2"),
+                make_optional<string>("255.255.255.1"), RequestProto::UDP,
+                make_optional<string>("eth1"), make_optional<string>("eth100"),
+                vector<RuleMatch>{{make_optional(make_tuple("127", "1405")),
+                                   make_optional(make_tuple("12", "145"))}},
+                "DROP"))));
 
 auto main(int argc, char **argv) -> int {
   ::testing::InitGoogleTest(&argc, argv);
