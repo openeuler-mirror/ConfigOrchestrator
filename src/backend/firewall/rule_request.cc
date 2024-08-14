@@ -1,7 +1,7 @@
 #include "backend/firewall/rule_request.h"
 #include "fmt/format.h"
-#include "tools/iptools.h"
 #include "tools/log.h"
+#include "tools/nettools.h"
 #include <arpa/inet.h>
 #include <cstring>
 #include <libiptc/libiptc.h>

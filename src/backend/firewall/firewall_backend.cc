@@ -1,8 +1,8 @@
 #include "backend/firewall/firewall_backend.h"
 #include "backend/firewall/rule_request.h"
 #include "fmt/core.h"
-#include "tools/iptools.h"
 #include "tools/log.h"
+#include "tools/nettools.h"
 
 #include <algorithm>
 #include <arpa/inet.h>

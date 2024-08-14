@@ -12,8 +12,8 @@
 #include "backend/firewall/firewall_backend.h"
 #include "backend/firewall/firewall_context.h"
 #include "backend/firewall/rule_request.h"
-#include "tools/iptools.h"
 #include "tools/log.h"
+#include "tools/nettools.h"
 
 using std::cout;
 using std::endl;

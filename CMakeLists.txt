@@ -81,7 +81,7 @@ set(BACK_SOURCES
 
 set(TOOL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/tools/sys.cc
-    ${CMAKE_SOURCE_DIR}/src/tools/iptools.cc
+    ${CMAKE_SOURCE_DIR}/src/tools/nettools.cc
     ${CMAKE_SOURCE_DIR}/src/tools/uitools.cc
     ${CMAKE_SOURCE_DIR}/src/tools/widget_manager.cc
 )

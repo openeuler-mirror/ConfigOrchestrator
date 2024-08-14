@@ -4,7 +4,7 @@
 #include "controlpanel.h"
 #include "fmt/core.h"
 #include "frontend/ui_base.h"
-#include "tools/iptools.h"
+#include "tools/nettools.h"
 #include "tools/uitools.h"
 
 #include <algorithm>

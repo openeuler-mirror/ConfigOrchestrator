@@ -1,5 +1,5 @@
-#ifndef IPTOOLS_H
-#define IPTOOLS_H
+#ifndef NETTOOLS_H
+#define NETTOOLS_H
 
 #include <cstdint>
 #include <string>
