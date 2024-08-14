@@ -57,7 +57,7 @@ public:
         iniface_(std::move(iniface)), outiface_(std::move(outiface)),
         matches_(std::move(matches)), target_(std::move(target)) {}
 
-  RuleRequest(const struct ipt_entry *rule, int index);
+  RuleRequest(iptc_handle *handle, const struct ipt_entry *rule, int index);
 
   auto to_entry_bytes(const ctx_t &context) -> optional<vector<char>>;
 };

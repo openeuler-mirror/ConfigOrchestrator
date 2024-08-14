@@ -3,10 +3,14 @@
 #include "tools/iptools.h"
 #include "tools/log.h"
 #include <arpa/inet.h>
+#include <cstring>
+#include <libiptc/libiptc.h>
 #include <optional>
+#include <string>
 #include <utility>
 
-RuleRequest::RuleRequest(const struct ipt_entry *rule, int index) {
+RuleRequest::RuleRequest(iptc_handle *handle, const struct ipt_entry *rule,
+                         int index) {
   index_ = index;
 
   src_ip_ = fmt::to_string(inet_ntoa(rule->ip.src));
@@ -15,9 +19,12 @@ RuleRequest::RuleRequest(const struct ipt_entry *rule, int index) {
   dst_mask_ = fmt::to_string(inet_ntoa(rule->ip.dmsk));
 
   proto_ = proto2String(rule->ip.proto);
-  iniface_ = fmt::to_string(rule->ip.iniface);
-  outiface_ = fmt::to_string(rule->ip.outiface);
-
+  if (strlen(rule->ip.iniface) > 0) {
+    iniface_ = string(rule->ip.iniface);
+  }
+  if (strlen(rule->ip.outiface) > 0) {
+    outiface_ = string(rule->ip.outiface);
+  }
   const auto *match = reinterpret_cast<const ipt_entry_match *>(rule->elems);
   while (reinterpret_cast<const char *>(match) !=
          reinterpret_cast<const char *>(rule) + rule->target_offset) {
@@ -43,9 +50,7 @@ RuleRequest::RuleRequest(const struct ipt_entry *rule, int index) {
   }
 
   if (rule->target_offset != rule->next_offset) {
-    const auto *target = reinterpret_cast<const ipt_entry_target *>(
-        reinterpret_cast<const char *>(rule) + rule->target_offset);
-    target_ = fmt::to_string(target->u.user.name);
+    target_ = iptc_get_target(rule, handle);
   }
 }
 
@@ -91,15 +96,23 @@ auto RuleRequest::to_entry_bytes(const ctx_t &context)
   }
 
   /* src/dst ip and mask */
-  auto setIp = [](const optional<string> &ip, struct in_addr &target) {
+  auto setIp = [](const optional<string> &ip, struct in_addr &target,
+                  bool is_mask) {
     if (ip.has_value()) {
       target.s_addr = inet_addr(ip->c_str());
+    } else {
+      if (is_mask) {
+        target.s_addr = INADDR_NONE;
+      } else {
+        target.s_addr = INADDR_ANY;
+      }
     }
   };
-  setIp(src_ip_, entry->ip.src);
-  setIp(src_mask_, entry->ip.smsk);
-  setIp(dst_ip_, entry->ip.dst);
-  setIp(dst_mask_, entry->ip.dmsk);
+
+  setIp(src_ip_, entry->ip.src, false);
+  setIp(src_mask_, entry->ip.smsk, true);
+  setIp(dst_ip_, entry->ip.dst, false);
+  setIp(dst_mask_, entry->ip.dmsk, true);
 
   /* iface */
   if (iniface_.has_value()) {
@@ -153,7 +166,7 @@ auto RuleRequest::to_entry_bytes(const ctx_t &context)
       std::any_of(iptTargets().begin(), iptTargets().end(),
                   [this](const auto &target) { return target == target_; })) {
     strncpy(target_entry->u.user.name, target_.c_str(),
-            sizeof(target_entry->u.user.name));
+            IPT_FUNCTION_MAXNAMELEN);
   }
 
   return entry_buffer;

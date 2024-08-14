@@ -99,9 +99,10 @@ auto FirewallBackend::getFirewallChildren(
     subconfigs = getChains(context);
     break;
   case FirewallLevel::CHAIN:
+    auto *handle = handles_.at(context->table_);
     auto rules = getRules(context);
     for (const auto &rule : rules) {
-      subconfigs.emplace_back(serializeShortRule(rule));
+      subconfigs.emplace_back(serializeShortRule(handle, rule));
     }
     break;
   }
@@ -119,7 +120,7 @@ auto FirewallBackend::getRuleDetails(const ctx_t &context,
     rule = iptc_next_rule(rule, handle);
   }
 
-  return serializeRule(rule);
+  return serializeRule(handle, rule);
 }
 
 auto FirewallBackend::createContext(const ctx_t &current,
@@ -178,7 +179,7 @@ auto FirewallBackend::getRule(const ctx_t &context,
     rule = iptc_next_rule(rule, handle);
   }
 
-  return std::make_shared<RuleRequest>(rule, index);
+  return std::make_shared<RuleRequest>(handle, rule, index);
 }
 
 auto FirewallBackend::removeChain(const ctx_t &context) -> bool {
@@ -290,7 +291,8 @@ auto FirewallBackend::insertChain(
   return true;
 }
 
-auto FirewallBackend::serializeRule(const struct ipt_entry *rule) -> string {
+auto FirewallBackend::serializeRule(iptc_handle *handle,
+                                    const struct ipt_entry *rule) -> string {
   std::string result;
 
   result += fmt::format("Source IP: {}\n", inet_ntoa(rule->ip.src));
@@ -330,15 +332,16 @@ auto FirewallBackend::serializeRule(const struct ipt_entry *rule) -> string {
   if (rule->target_offset != rule->next_offset) {
     const auto *target = reinterpret_cast<const ipt_entry_target *>(
         reinterpret_cast<const char *>(rule) + rule->target_offset);
-    result += fmt::format("Target Name: {}\n", target->u.user.name);
+    auto target_name = iptc_get_target(rule, handle);
+    result += fmt::format("Target Name: {}\n", target_name);
     result += fmt::format("Target Size: {}\n", target->u.user.target_size);
   }
 
   return result;
 }
 
-auto FirewallBackend::serializeShortRule(const struct ipt_entry *rule)
-    -> string {
+auto FirewallBackend::serializeShortRule(
+    iptc_handle *handle, const struct ipt_entry *rule) -> string {
   std::string result;
   result += fmt::format("SRC: {}, DST: {}, PROTO: {}", inet_ntoa(rule->ip.src),
                         inet_ntoa(rule->ip.dst), proto2String(rule->ip.proto));
@@ -371,9 +374,7 @@ auto FirewallBackend::serializeShortRule(const struct ipt_entry *rule)
   }
 
   if (rule->target_offset != rule->next_offset) {
-    const auto *target = reinterpret_cast<const ipt_entry_target *>(
-        reinterpret_cast<const char *>(rule) + rule->target_offset);
-    auto target_name = fmt::to_string(target->u.user.name);
+    auto target_name = string(iptc_get_target(rule, handle));
     if (!target_name.empty()) {
       result += fmt::format(" | {}\n", target_name);
     }

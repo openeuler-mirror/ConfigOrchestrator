@@ -81,9 +81,11 @@ private:
   auto destroyHandlers() -> bool;
 
   /* tool func for iptable rules */
-  static auto serializeRule(const struct ipt_entry *rule) -> string;
+  static auto serializeRule(iptc_handle *handle,
+                            const struct ipt_entry *rule) -> string;
 
-  static auto serializeShortRule(const struct ipt_entry *rule) -> string;
+  static auto serializeShortRule(iptc_handle *handle,
+                                 const struct ipt_entry *rule) -> string;
 
   /**
    * tool func for fronetend-backend conversion
