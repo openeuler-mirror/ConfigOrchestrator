@@ -8,6 +8,7 @@
 #include <tuple>
 #include <vector>
 
+#include "backend/firewall/chain_request.h"
 #include "backend/firewall/firewall_backend.h"
 #include "backend/firewall/firewall_context.h"
 #include "backend/firewall/rule_request.h"
@@ -60,11 +61,79 @@ void TestTableContext(const shared_ptr<FirewallBackend> &fwb,
   }
 }
 
+void TestChainAddDel(const shared_ptr<FirewallBackend> &fwb,
+                     const string &table) {
+  auto ctx = make_shared<FirewallContext>();
+  ctx = fwb->createContext(ctx, table);
+
+  ASSERT_EQ(ctx->level_, FirewallLevel::TABLE);
+  ASSERT_EQ(ctx->table_, table);
+
+  auto chains = fwb->getFirewallChildren(ctx);
+  for (const auto &chain : chains) {
+    auto ch_ctx = fwb->createContext(ctx, chain);
+
+    ASSERT_EQ(ch_ctx->level_, FirewallLevel::CHAIN);
+    ASSERT_EQ(ch_ctx->table_, table);
+    ASSERT_EQ(ch_ctx->chain_, chain);
+
+    ASSERT_FALSE(fwb->insertChain(ctx, make_shared<ChainRequest>(chain)));
+  }
+
+  auto new_chains = fwb->getFirewallChildren(ctx);
+  ASSERT_EQ(chains.size(), new_chains.size());
+
+  ASSERT_TRUE(fwb->insertChain(ctx, make_shared<ChainRequest>("NEW_CHAIN")));
+  auto ch_ctx = fwb->createContext(ctx, "NEW_CHAIN");
+  ASSERT_EQ(ch_ctx->level_, FirewallLevel::CHAIN);
+  ASSERT_EQ(ch_ctx->table_, table);
+  ASSERT_EQ(ch_ctx->chain_, "NEW_CHAIN");
+  new_chains = fwb->getFirewallChildren(ctx);
+  ASSERT_EQ(chains.size() + 1, new_chains.size());
+
+  auto commit = fwb->apply();
+  ASSERT_TRUE(commit());
+
+  {
+    auto new_fwb = make_shared<FirewallBackend>();
+    auto new_ctx = make_shared<FirewallContext>();
+    new_ctx = new_fwb->createContext(new_ctx, table);
+    new_chains = new_fwb->getFirewallChildren(new_ctx);
+    ASSERT_EQ(chains.size() + 1, new_chains.size());
+
+    new_ctx = new_fwb->createContext(new_ctx, "NEW_CHAIN");
+    ASSERT_EQ(new_ctx->level_, FirewallLevel::CHAIN);
+    ASSERT_EQ(new_ctx->table_, table);
+    ASSERT_EQ(new_ctx->chain_, "NEW_CHAIN");
+  }
+
+  ASSERT_TRUE(fwb->removeChain(ch_ctx));
+  new_chains = fwb->getFirewallChildren(ctx);
+  ASSERT_EQ(chains.size(), new_chains.size());
+
+  ASSERT_TRUE(commit());
+  {
+    auto new_fwb = make_shared<FirewallBackend>();
+    auto new_ctx = make_shared<FirewallContext>();
+    new_ctx = new_fwb->createContext(new_ctx, table);
+    new_chains = new_fwb->getFirewallChildren(new_ctx);
+    ASSERT_EQ(chains.size(), new_chains.size());
+  }
+}
+
 TEST_F(FirewallTestFixture, getChain) {
   auto ctx = make_shared<FirewallContext>();
   auto tables = fwb->getTableNames();
   for (const auto &table : tables) {
     TestTableContext(fwb, table);
+  }
+}
+
+TEST_F(FirewallTestFixture, addDelChain) {
+  auto ctx = make_shared<FirewallContext>();
+  auto tables = fwb->getTableNames();
+  for (const auto &table : tables) {
+    TestChainAddDel(fwb, table);
   }
 }
 
