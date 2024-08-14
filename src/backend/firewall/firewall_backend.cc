@@ -343,8 +343,9 @@ auto FirewallBackend::serializeRule(iptc_handle *handle,
 auto FirewallBackend::serializeShortRule(
     iptc_handle *handle, const struct ipt_entry *rule) -> string {
   std::string result;
-  result += fmt::format("SRC: {}, DST: {}, PROTO: {}", inet_ntoa(rule->ip.src),
-                        inet_ntoa(rule->ip.dst), proto2String(rule->ip.proto));
+  result += fmt::format(
+      "SRC: {}, DST: {}, PROTO: {}", string(inet_ntoa(rule->ip.src)),
+      string(inet_ntoa(rule->ip.dst)), proto2String(rule->ip.proto));
 
   static constexpr int kMinPort = 0;
   static constexpr int kMaxPort = 65535;
