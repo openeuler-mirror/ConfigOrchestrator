@@ -136,7 +136,8 @@ auto UIBase::display() -> void {
 }
 
 auto UIBase::checkExit() const -> bool {
-  const static string msg = "There are unsaved changes. Do you want to exit?";
+  const static string msg_head = "There are unsaved changes:";
+  const static string msg_tail = "Do you want to exit?";
 
   YWidgetFactory *fac = YUI::widgetFactory();
   YDialog *warn_dialog = fac->createPopupDialog();
@@ -144,7 +145,10 @@ auto UIBase::checkExit() const -> bool {
   YLayoutBox *vbox = fac->createVBox(warn_dialog);
   YAlignment *minSize = fac->createMinSize(
       vbox, dialog_meta::kPopDialogMinWidth, dialog_meta::kPopDialogMinHeight);
-  YLabel *label = fac->createOutputField(minSize, getPageDescription());
+
+  /* get unsave configs */
+  auto msg = msg_head + msg_tail;
+  YLabel *label = fac->createOutputField(minSize, msg);
   label->setAutoWrap();
 
   auto *exit_button = fac->createPushButton(vbox, "Exit");
