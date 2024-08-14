@@ -11,6 +11,11 @@ auto WidgetManager::addWidget(YWidget *widget,
 }
 
 auto WidgetManager::removeWidget(YWidget *widget) -> void {
+  for (auto child = widget->childrenBegin(); child != widget->childrenEnd();
+       ++child) {
+    removeWidget(*child);
+  }
+
   if (widgets_.contains(widget)) {
     widgets_.erase(widget);
   }
