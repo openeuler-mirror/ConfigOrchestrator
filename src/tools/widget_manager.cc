@@ -29,3 +29,12 @@ auto WidgetManager::handleEvent(YEvent *event) -> HandleResult {
   }
   return HandleResult::CONT; /* use next widget manager */
 }
+
+auto WidgetManager::exec() -> bool {
+  auto res = true;
+  for (const auto &[_, func] : widgets_) {
+    res &= (func() == HandleResult::SUCCESS);
+  }
+
+  return res;
+}

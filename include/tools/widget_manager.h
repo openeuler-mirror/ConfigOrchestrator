@@ -24,7 +24,15 @@ public:
 
   auto removeWidget(YWidget *widget) -> void;
 
+  /*
+   * @brief handle an event when widget manager is used as event manager
+   */
   auto handleEvent(YEvent *event) -> HandleResult;
+
+  /*
+   * @brief execute all widgets' functions when is used as widget collector
+   */
+  auto exec() -> bool;
 
 private:
   std::unordered_map<YWidget *, std::function<HandleResult()>> widgets_;

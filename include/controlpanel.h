@@ -32,12 +32,16 @@
 /**
  * @brief result of handling an event when call a widget's closure
  *
- * SUCCESS: event has been handled (note that not necessarily successful)
- * BREAK: event has been handled and break the event loop
- * EXIT: event has been handled and exit the program
- * CONT: continue to the next event handler since event not handled
+ * SUCCESS:
+ *      - in manager: event has been handled (note that not necessarily
+ * successful)
+ *      - in collector: confirm can be processed
+ * BREAK: (in manager) event has been handled and break the event loop
+ * EXIT: (in manager) event has been handled and exit the program
+ * CONT: (in manager) continue to the next event handler since event not handled
+ * ERROR: (in collector) error occurs and cancel proceeding
  */
-enum class HandleResult : unsigned int { SUCCESS, BREAK, EXIT, CONT };
+enum class HandleResult : unsigned int { SUCCESS, BREAK, EXIT, CONT, ERROR };
 
 enum class DisplayResult : unsigned int { SUCCESS, ERROR };
 

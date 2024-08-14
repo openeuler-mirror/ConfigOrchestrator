@@ -84,7 +84,6 @@ public:
 protected:
   /* event handler framework */
   WidgetManager widget_manager_;
-  using widget_func_t = tuple<YWidget *, function<bool()>>;
 
 private:
   string name_;

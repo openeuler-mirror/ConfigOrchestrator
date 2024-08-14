@@ -6,6 +6,7 @@
 #include "frontend/ui_base.h"
 #include "tools/nettools.h"
 #include "tools/uitools.h"
+#include "tools/widget_manager.h"
 
 #include <yui/YAlignment.h>
 #include <yui/YButtonBox.h>
@@ -350,7 +351,7 @@ auto FirewallConfig::createUpdateRule(optional<int> index)
     title->autoWrap();
   }
 
-  vector<widget_func_t> widget_targets;
+  WidgetManager collector;
   {
     /* Line 1: position, protocol and target */
     auto *hbox = fac->createHBox(vbox);
@@ -364,10 +365,10 @@ auto FirewallConfig::createUpdateRule(optional<int> index)
           firewall_backend_->getFirewallChildren(firewall_context_).size());
       auto text = fmt::format("Rule #(1-{})", rule_num);
       auto *pos_input = fac->createIntField(hbox, text, 1, rule_num + 1, 1);
-      widget_targets.emplace_back(pos_input, [pos_input, &request]() {
+      collector.addWidget(pos_input, [pos_input, &request]() {
         auto *widget = dynamic_cast<YIntField *>(pos_input);
         request->index_ = widget->value();
-        return true;
+        return HandleResult::SUCCESS;
       });
     }
 
@@ -381,13 +382,13 @@ auto FirewallConfig::createUpdateRule(optional<int> index)
     if (index.has_value()) {
       proto_box->setValue(request->proto_);
     }
-    widget_targets.emplace_back(proto_box, [proto_box, &request]() {
+    collector.addWidget(proto_box, [proto_box, &request]() {
       auto *widget = dynamic_cast<YComboBox *>(proto_box);
       auto *item = widget->selectedItem();
 
       auto value = item->label();
       request->proto_ = value;
-      return true;
+      return HandleResult::SUCCESS;
     });
 
     auto iptables_targets = iptTargets();
@@ -404,13 +405,13 @@ auto FirewallConfig::createUpdateRule(optional<int> index)
                     })) {
       target_box->setValue(request->target_);
     }
-    widget_targets.emplace_back(target_box, [target_box, &request]() {
+    collector.addWidget(target_box, [target_box, &request]() {
       auto *widget = dynamic_cast<YComboBox *>(target_box);
       auto *item = widget->selectedItem();
 
       auto value = item->label();
       request->target_ = value;
-      return true;
+      return HandleResult::SUCCESS;
     });
   }
 
@@ -440,7 +441,7 @@ auto FirewallConfig::createUpdateRule(optional<int> index)
         mask->setValue(kFFMask);
       }
 
-      widget_targets.emplace_back(
+      collector.addWidget(
           frame, [hbox, addr, mask, &addr_target, &mask_target]() {
             if (hbox->isEnabled()) {
               auto *addr_widget = dynamic_cast<YInputField *>(addr);
@@ -449,7 +450,7 @@ auto FirewallConfig::createUpdateRule(optional<int> index)
               auto *mask_widget = dynamic_cast<YInputField *>(mask);
               mask_target = mask_widget->value();
             }
-            return true;
+            return HandleResult::SUCCESS;
           });
     }
   };
@@ -468,12 +469,12 @@ auto FirewallConfig::createUpdateRule(optional<int> index)
       iface->setValue(request->iniface_.value());
     }
 
-    widget_targets.emplace_back(frame, [iface, &request]() {
+    collector.addWidget(frame, [iface, &request]() {
       if (iface->isEnabled()) {
         auto *iface_widget = dynamic_cast<YInputField *>(iface);
         request->iniface_ = iface_widget->value();
       }
-      return true;
+      return HandleResult::SUCCESS;
     });
   }
   {
@@ -486,12 +487,12 @@ auto FirewallConfig::createUpdateRule(optional<int> index)
       iface->setValue(request->outiface_.value());
     }
 
-    widget_targets.emplace_back(frame, [iface, &request]() {
+    collector.addWidget(frame, [iface, &request]() {
       if (iface->isEnabled()) {
         auto *iface_widget = dynamic_cast<YInputField *>(iface);
         request->outiface_ = iface_widget->value();
       }
-      return true;
+      return HandleResult::SUCCESS;
     });
   }
 
@@ -516,21 +517,20 @@ auto FirewallConfig::createUpdateRule(optional<int> index)
         to->setValue(std::stoi(to_str));
       }
 
-      widget_targets.emplace_back(frame, [hbox, from, to, &port_target,
-                                          &request]() {
+      collector.addWidget(frame, [hbox, from, to, &port_target, &request]() {
         if (hbox->isEnabled()) {
           auto *to_widget = dynamic_cast<YIntField *>(to);
           auto *from_widget = dynamic_cast<YIntField *>(from);
 
           if (to_widget->value() < from_widget->value()) {
-            return false;
+            return HandleResult::ERROR;
           }
 
           port_target = std::make_tuple("", "");
           get<0>(port_target.value()) = std::to_string(from_widget->value());
           get<1>(port_target.value()) = std::to_string(to_widget->value());
         }
-        return true;
+        return HandleResult::SUCCESS;
       });
     };
 
@@ -546,31 +546,24 @@ auto FirewallConfig::createUpdateRule(optional<int> index)
   while (true) {
     auto *event = dialog->waitForEvent();
     if (event->widget() == confirm) {
-      bool flag = true;
-      for (const auto &[_, func] : widget_targets) {
-        flag &= func();
-        if (!flag) {
-          static const string kInvalidInput = "Invalid input.";
-          showDialog(dialog_meta::ERROR, kInvalidInput);
-          break;
-        }
+      if (!collector.exec()) {
+        static const string kInvalidInput = "Invalid input.";
+        showDialog(dialog_meta::ERROR, kInvalidInput);
+        continue;
       }
 
-      if (flag) {
-        // special case for port range
-        if (!request->matches_.front().src_port_range_.has_value() &&
-            !request->matches_.front().dst_port_range_.has_value()) {
-          request->matches_.clear();
-        }
-        dialog->destroy();
-        return request;
+      // special case for port range
+      if (!request->matches_.front().src_port_range_.has_value() &&
+          !request->matches_.front().dst_port_range_.has_value()) {
+        request->matches_.clear();
       }
+      dialog->destroy();
+      return request;
     }
 
     if (event->widget() == cancel ||
         event->eventType() == YEvent::CancelEvent) {
-      dialog->destroy();
-      return nullptr;
+      break;
     }
   }
 
@@ -590,12 +583,12 @@ auto FirewallConfig::createChain() -> shared_ptr<ChainRequest> {
   auto *title = fac->createLabel(vbox, "Create Firewall Chain");
   title->autoWrap();
 
-  vector<widget_func_t> widget_targets;
+  WidgetManager collector;
   auto *name = fac->createInputField(vbox, "Chain Name");
-  widget_targets.emplace_back(name, [name, &request]() {
+  collector.addWidget(name, [name, &request]() {
     auto *widget = dynamic_cast<YInputField *>(name);
     request->chain_name_ = widget->value();
-    return true;
+    return HandleResult::SUCCESS;
   });
 
   auto *control_layout = fac->createHBox(vbox);
@@ -606,26 +599,19 @@ auto FirewallConfig::createChain() -> shared_ptr<ChainRequest> {
   while (true) {
     auto *event = dialog->waitForEvent();
     if (event->widget() == confirm) {
-      bool flag = true;
-      for (const auto &[_, func] : widget_targets) {
-        flag &= func();
-        if (!flag) {
-          static const string kInvalidInput = "Invalid input.";
-          showDialog(dialog_meta::ERROR, kInvalidInput);
-          break;
-        }
+      if (!collector.exec()) {
+        static const string kInvalidInput = "Invalid input.";
+        showDialog(dialog_meta::ERROR, kInvalidInput);
+        break;
       }
 
-      if (flag) {
-        dialog->destroy();
-        return request;
-      }
+      dialog->destroy();
+      return request;
     }
 
     if (event->widget() == cancel ||
         event->eventType() == YEvent::CancelEvent) {
-      dialog->destroy();
-      return nullptr;
+      break;
     }
   }
 
