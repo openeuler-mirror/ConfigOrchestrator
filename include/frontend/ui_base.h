@@ -82,6 +82,8 @@ public:
   [[nodiscard]] virtual auto getPageName() const -> string = 0;
 
 protected:
+  /* event handler framework */
+  WidgetManager widget_manager_;
   using widget_func_t = tuple<YWidget *, function<bool()>>;
 
 private:
@@ -96,8 +98,6 @@ private:
   YLayoutBox *global_control_layout_;
   YLayoutBox *feature_layout_;
   YLayoutBox *user_control_layout_;
-
-  WidgetManager widget_manager_;
 
   static constexpr YLayoutSize_t kHboxHorMargin = 4;
   static constexpr YLayoutSize_t kHboxVertMargin = 0.1;

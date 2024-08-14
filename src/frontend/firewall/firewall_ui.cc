@@ -7,13 +7,6 @@
 #include "tools/nettools.h"
 #include "tools/uitools.h"
 
-#include <algorithm>
-#include <arpa/inet.h>
-#include <cstring>
-#include <optional>
-#include <string>
-#include <tuple>
-#include <vector>
 #include <yui/YAlignment.h>
 #include <yui/YButtonBox.h>
 #include <yui/YCheckBox.h>
@@ -50,9 +43,16 @@
 #include <yui/YWidget.h>
 #include <yui/YWidgetFactory.h>
 
+#include <algorithm>
+#include <arpa/inet.h>
+#include <cstring>
 #include <memory>
+#include <optional>
 #include <sstream>
+#include <string>
+#include <tuple>
 #include <utility>
+#include <vector>
 
 using std::stringstream;
 
@@ -78,42 +78,31 @@ FirewallConfig::FirewallConfig(const string &name,
   firewall_backend_ = ConfigManager::instance().getBackend<FirewallBackend>();
 };
 
-auto FirewallConfig::fresh(YDialog *main_dialog, DisplayLayout layout) // NOLINT
-    -> bool {
+auto FirewallConfig::fresh(YDialog *main_dialog, DisplayLayout layout) -> bool {
   auto res = true;
   iptable_children = firewall_backend_->getFirewallChildren(firewall_context_);
 
   auto *fac = getFactory();
   auto *main_layout = layout.feature_layout_;
 
-  // TODO(yiyan): remove children from tragets
-  for (auto it = main_layout->childrenBegin(); it != main_layout->childrenEnd();
-       it++) {
-    for (auto widget_it = widgets_targets_.begin();
-         widget_it != widgets_targets_.end(); widget_it++) {
-      if (get<0>(*widget_it) == *it) {
-        widgets_targets_.erase(widget_it);
-        break;
-      }
-    }
-  }
+  widget_manager_.removeWidget(main_layout);
+
   main_layout->deleteChildren();
   switch (firewall_context_->level_) {
   case FirewallLevel::OVERALL: {
     for (const auto &child : iptable_children) {
       auto *chain_button = fac->createPushButton(main_layout, child);
-      widgets_targets_.emplace_back(
-          chain_button, [this, chain_button, child]() {
-            auto context =
-                firewall_backend_->createContext(firewall_context_, child);
+      widget_manager_.addWidget(chain_button, [this, chain_button, child]() {
+        auto context =
+            firewall_backend_->createContext(firewall_context_, child);
 
-            auto subpage = std::make_shared<FirewallConfig>(
-                child, shared_from_this(), context);
+        auto subpage = std::make_shared<FirewallConfig>(
+            child, shared_from_this(), context);
 
-            subpage->display();
-            subpage->handleEvent();
-            return true;
-          });
+        subpage->display();
+        subpage->handleEvent();
+        return HandleResult::SUCCESS;
+      });
     }
     break;
   }
@@ -125,19 +114,18 @@ auto FirewallConfig::fresh(YDialog *main_dialog, DisplayLayout layout) // NOLINT
       fac->createHSpacing(hbox, 2);
       auto *del_button = fac->createPushButton(hbox, "Delete");
 
-      widgets_targets_.emplace_back(
-          chain_button, [this, chain_button, child]() {
-            auto context =
-                firewall_backend_->createContext(firewall_context_, child);
+      widget_manager_.addWidget(chain_button, [this, chain_button, child]() {
+        auto context =
+            firewall_backend_->createContext(firewall_context_, child);
 
-            auto subpage = std::make_shared<FirewallConfig>(
-                child, shared_from_this(), context);
+        auto subpage = std::make_shared<FirewallConfig>(
+            child, shared_from_this(), context);
 
-            subpage->display();
-            subpage->handleEvent();
-            return true;
-          });
-      widgets_targets_.emplace_back(
+        subpage->display();
+        subpage->handleEvent();
+        return HandleResult::SUCCESS;
+      });
+      widget_manager_.addWidget(
           del_button, [this, child, main_dialog, layout]() {
             auto remove_ctx =
                 firewall_backend_->createContext(firewall_context_, child);
@@ -155,7 +143,7 @@ auto FirewallConfig::fresh(YDialog *main_dialog, DisplayLayout layout) // NOLINT
               fresh(main_dialog, layout);
             }
 
-            return true;
+            return HandleResult::SUCCESS;
           });
     }
     break;
@@ -173,15 +161,15 @@ auto FirewallConfig::fresh(YDialog *main_dialog, DisplayLayout layout) // NOLINT
       fac->createHSpacing(hbox, 2);
       auto *update_button = fac->createPushButton(hbox, "Update");
 
-      widgets_targets_.emplace_back(detail_button, [this, index]() {
+      widget_manager_.addWidget(detail_button, [this, index]() {
         auto title = fmt::format("Rule Detail: #{}", index);
         showDialog(title,
                    firewall_backend_->getRuleDetails(firewall_context_, index));
-        return true;
+        return HandleResult::SUCCESS;
       });
 
-      widgets_targets_.emplace_back(del_button, [this, iptable_child, index,
-                                                 main_dialog, layout]() {
+      widget_manager_.addWidget(del_button, [this, iptable_child, index,
+                                             main_dialog, layout]() {
         auto res = firewall_backend_->removeRule(firewall_context_, index);
 
         if (!res) {
@@ -189,35 +177,33 @@ auto FirewallConfig::fresh(YDialog *main_dialog, DisplayLayout layout) // NOLINT
               "Failed to remove chain: #{}\nChain brief: {}\nError: {}\n",
               index, iptable_child, firewall_context_->getLastError());
           showDialog(dialog_meta::ERROR, msg);
-          return true;
+          return HandleResult::SUCCESS;
         }
 
         ConfigManager::instance().registerApplyFunc(firewall_backend_->apply());
         fresh(main_dialog, layout);
-        return true;
+        return HandleResult::SUCCESS;
       });
 
-      widgets_targets_.emplace_back(update_button, [this, iptable_child, index,
-                                                    main_dialog, layout]() {
+      widget_manager_.addWidget(update_button, [this, iptable_child, index,
+                                                main_dialog, layout]() {
         auto request = createUpdateRule(index);
         if (request == nullptr) {
-          return true; /* cancel */
+          return HandleResult::SUCCESS; /* cancel */
         }
 
-        auto res =
-            firewall_backend_->updateRule(firewall_context_, request, index);
-        if (!res) {
+        if (!firewall_backend_->updateRule(firewall_context_, request, index)) {
           auto msg = fmt::format(
               "Failed to update chain: #{}\nChain brief: {}\nError: {}\n",
               index, iptable_child, firewall_context_->getLastError());
 
           showDialog(dialog_meta::ERROR, msg);
-          return true;
+          return HandleResult::SUCCESS;
         }
 
         ConfigManager::instance().registerApplyFunc(firewall_backend_->apply());
         fresh(main_dialog, layout);
-        return true;
+        return HandleResult::SUCCESS;
       });
     }
   }
@@ -245,11 +231,10 @@ auto FirewallConfig::userDisplay(YDialog *main_dialog,
     auto *add_chain_button =
         fac->createPushButton(control_layout, kAddChainButtonText);
 
-    widgets_targets_.emplace_back(add_chain_button, [this, main_dialog,
-                                                     layout]() {
+    widget_manager_.addWidget(add_chain_button, [this, main_dialog, layout]() {
       auto requset = createChain();
       if (requset == nullptr) {
-        return true;
+        return HandleResult::SUCCESS; /* cancel */
       }
 
       if (!firewall_backend_->insertChain(firewall_context_, requset)) {
@@ -263,7 +248,8 @@ auto FirewallConfig::userDisplay(YDialog *main_dialog,
         ConfigManager::instance().registerApplyFunc(firewall_backend_->apply());
         fresh(main_dialog, layout);
       }
-      return true;
+
+      return HandleResult::SUCCESS;
     });
     break;
   }
@@ -271,23 +257,23 @@ auto FirewallConfig::userDisplay(YDialog *main_dialog,
   case FirewallLevel::CHAIN: {
     auto *add_rule_button =
         fac->createPushButton(control_layout, kAddRuleButtonText);
-    widgets_targets_.emplace_back(add_rule_button, [this, main_dialog,
-                                                    layout]() {
+    widget_manager_.addWidget(add_rule_button, [this, main_dialog, layout]() {
       auto request = createUpdateRule(std::nullopt);
-      if (request != nullptr) {
-        auto res = firewall_backend_->insertRule(firewall_context_, request);
-        if (!res) {
-          auto msg = fmt::format("Failed to add rule, Error: {}\n",
-                                 firewall_context_->getLastError());
-          showDialog(dialog_meta::ERROR, msg);
-          return true;
-        }
-
-        ConfigManager::instance().registerApplyFunc(firewall_backend_->apply());
-        fresh(main_dialog, layout);
+      if (request == nullptr) {
+        return HandleResult::SUCCESS;
       }
 
-      return true;
+      if (!firewall_backend_->insertRule(firewall_context_, request)) {
+        auto msg = fmt::format("Failed to add rule, Error: {}\n",
+                               firewall_context_->getLastError());
+        showDialog(dialog_meta::ERROR, msg);
+        return HandleResult::SUCCESS;
+      }
+
+      ConfigManager::instance().registerApplyFunc(firewall_backend_->apply());
+      fresh(main_dialog, layout);
+
+      return HandleResult::SUCCESS;
     });
     break;
   }
@@ -300,17 +286,7 @@ auto FirewallConfig::userDisplay(YDialog *main_dialog,
 }
 
 auto FirewallConfig::userHandleEvent(YEvent *event) -> HandleResult {
-  auto res = HandleResult::CONT;
-  for (const auto &[widget, func] : widgets_targets_) {
-    if (event->widget() == widget) {
-      func();
-
-      res = HandleResult::SUCCESS;
-      break;
-    }
-  }
-
-  return res;
+  return widget_manager_.handleEvent(event);
 }
 
 auto FirewallConfig::getPageDescription() const -> string {

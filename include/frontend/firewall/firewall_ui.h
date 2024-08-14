@@ -8,6 +8,7 @@
 #include "frontend/ui_base.h"
 
 #include "YPushButton.h"
+#include "tools/widget_manager.h"
 #include <functional>
 #include <linux/netfilter_ipv4/ip_tables.h>
 #include <memory>
@@ -48,7 +49,6 @@ private:
 
   shared_ptr<FirewallContext> firewall_context_;
   shared_ptr<FirewallBackend> firewall_backend_;
-  vector<widget_func_t> widgets_targets_;
 
   vector<string> iptable_children;
 
