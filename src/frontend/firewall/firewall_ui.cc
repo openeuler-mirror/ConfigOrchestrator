@@ -61,7 +61,6 @@ const string FirewallConfig::kNonSuWarnText =
 const string FirewallConfig::kAddRuleButtonText = "&Add Firewall Rule";
 const string FirewallConfig::kAddChainButtonText = "&Add Firewall Chain";
 const string FirewallConfig::kDelRuleButtonText = "Delete";
-const string FirewallConfig::kDelChainButtonText = "&Delete Firewall Chain";
 
 FirewallConfig::FirewallConfig(const string &name,
                                const shared_ptr<UIBase> &parent,
@@ -100,21 +99,64 @@ auto FirewallConfig::fresh(YDialog *main_dialog, DisplayLayout layout) // NOLINT
   }
   main_layout->deleteChildren();
   switch (firewall_context_->level_) {
-  case FirewallLevel::OVERALL:
+  case FirewallLevel::OVERALL: {
+    for (const auto &child : iptable_children) {
+      auto *chain_button = fac->createPushButton(main_layout, child);
+      widgets_targets_.emplace_back(
+          chain_button, [this, chain_button, child]() {
+            auto context =
+                firewall_backend_->createContext(firewall_context_, child);
+
+            auto subpage = std::make_shared<FirewallConfig>(
+                child, shared_from_this(), context);
+
+            subpage->display();
+            subpage->handleEvent();
+            return true;
+          });
+    }
+    break;
+  }
   case FirewallLevel::TABLE: {
     for (const auto &child : iptable_children) {
-      auto *button = fac->createPushButton(main_layout, child);
-      widgets_targets_.emplace_back(button, [this, button, child]() {
-        auto context =
-            firewall_backend_->createContext(firewall_context_, child);
+      auto *hbox = fac->createHBox(main_layout);
 
-        auto subpage = std::make_shared<FirewallConfig>(
-            child, shared_from_this(), context);
+      auto *chain_button = fac->createPushButton(hbox, child);
+      fac->createHSpacing(hbox, 2);
+      auto *del_button = fac->createPushButton(hbox, "Delete");
 
-        subpage->display();
-        subpage->handleEvent();
-        return true;
-      });
+      widgets_targets_.emplace_back(
+          chain_button, [this, chain_button, child]() {
+            auto context =
+                firewall_backend_->createContext(firewall_context_, child);
+
+            auto subpage = std::make_shared<FirewallConfig>(
+                child, shared_from_this(), context);
+
+            subpage->display();
+            subpage->handleEvent();
+            return true;
+          });
+      widgets_targets_.emplace_back(
+          del_button, [this, child, main_dialog, layout]() {
+            auto remove_ctx =
+                firewall_backend_->createContext(firewall_context_, child);
+
+            if (!firewall_backend_->removeChain(remove_ctx)) {
+              auto msg = fmt::format("Failed to remove chain: {}, Error: {}\n",
+                                     child, remove_ctx->getLastError());
+              showDialog(dialog_meta::ERROR, msg);
+            } else {
+              auto msg = fmt::format("Chain removed: {}\n", child);
+              showDialog(dialog_meta::INFO, msg);
+
+              ConfigManager::instance().registerApplyFunc(
+                  firewall_backend_->apply());
+              fresh(main_dialog, layout);
+            }
+
+            return true;
+          });
     }
     break;
   }
@@ -200,38 +242,37 @@ auto FirewallConfig::userDisplay(YDialog *main_dialog,
     break;
   }
   case FirewallLevel::TABLE: {
-    auto *add_chain_button_ =
+    auto *add_chain_button =
         fac->createPushButton(control_layout, kAddChainButtonText);
 
-    widgets_targets_.emplace_back(add_chain_button_, [this, main_dialog,
-                                                      layout]() {
+    widgets_targets_.emplace_back(add_chain_button, [this, main_dialog,
+                                                     layout]() {
       auto requset = createChain();
-      if (requset != nullptr) {
-        auto res = firewall_backend_->insertChain(firewall_context_, requset);
-        stringstream ss;
+      if (requset == nullptr) {
+        return true;
+      }
 
-        if (!res) {
-          ss << "Failed to add chain.";
-          showDialog(dialog_meta::ERROR, ss.str());
-        } else {
-          stringstream ss;
-          ss << "Chain added: " << requset->chain_name_;
-          showDialog(dialog_meta::INFO, ss.str());
-          ConfigManager::instance().registerApplyFunc(
-              firewall_backend_->apply());
+      if (!firewall_backend_->insertChain(firewall_context_, requset)) {
+        auto msg = fmt::format("Failed to add chain, Error: {}\n",
+                               firewall_context_->getLastError());
+        showDialog(dialog_meta::ERROR, msg);
+      } else {
+        auto msg = fmt::format("Chain added: {}\n", requset->chain_name_);
+        showDialog(dialog_meta::INFO, msg);
 
-          fresh(main_dialog, layout);
-        }
+        ConfigManager::instance().registerApplyFunc(firewall_backend_->apply());
+        fresh(main_dialog, layout);
       }
       return true;
     });
     break;
   }
+
   case FirewallLevel::CHAIN: {
-    auto *add_rule_button_ =
+    auto *add_rule_button =
         fac->createPushButton(control_layout, kAddRuleButtonText);
-    widgets_targets_.emplace_back(add_rule_button_, [this, main_dialog,
-                                                     layout]() {
+    widgets_targets_.emplace_back(add_rule_button, [this, main_dialog,
+                                                    layout]() {
       auto request = createUpdateRule(std::nullopt);
       if (request != nullptr) {
         auto res = firewall_backend_->insertRule(firewall_context_, request);
@@ -241,27 +282,6 @@ auto FirewallConfig::userDisplay(YDialog *main_dialog,
           showDialog(dialog_meta::ERROR, msg);
           return true;
         }
-
-        ConfigManager::instance().registerApplyFunc(firewall_backend_->apply());
-        fresh(main_dialog, layout);
-      }
-
-      return true;
-    });
-
-    auto *del_chain_button_ =
-        fac->createPushButton(control_layout, kDelChainButtonText);
-    widgets_targets_.emplace_back(del_chain_button_, [this, main_dialog,
-                                                      layout]() {
-      auto res = firewall_backend_->removeChain(firewall_context_);
-      stringstream ss;
-
-      if (!res) {
-        ss << "Failed to remove chain: " << firewall_context_->serialize();
-        showDialog(dialog_meta::ERROR, ss.str());
-      } else {
-        ss << "Chain removed: " << firewall_context_->serialize();
-        showDialog(dialog_meta::INFO, ss.str());
 
         ConfigManager::instance().registerApplyFunc(firewall_backend_->apply());
         fresh(main_dialog, layout);

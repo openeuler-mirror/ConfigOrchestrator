@@ -56,7 +56,6 @@ private:
   const static string kAddRuleButtonText;
   const static string kAddChainButtonText;
   const static string kDelRuleButtonText;
-  const static string kDelChainButtonText;
 };
 
 #endif
