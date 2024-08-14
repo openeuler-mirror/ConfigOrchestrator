@@ -89,25 +89,25 @@ auto FirewallBackend::apply() -> function<bool()> {
 
 auto FirewallBackend::getFirewallChildren(
     const shared_ptr<FirewallContext> &context) -> vector<string> {
-  vector<string> subconfigs;
+  vector<string> children;
 
   switch (context->level_) {
   case FirewallLevel::OVERALL:
-    subconfigs = getTableNames();
+    children = getTableNames();
     break;
   case FirewallLevel::TABLE:
-    subconfigs = getChains(context);
+    children = getChains(context);
     break;
   case FirewallLevel::CHAIN:
     auto *handle = handles_.at(context->table_);
     auto rules = getRules(context);
     for (const auto &rule : rules) {
-      subconfigs.emplace_back(serializeShortRule(handle, rule));
+      children.emplace_back(serializeShortRule(handle, rule));
     }
     break;
   }
 
-  return subconfigs;
+  return children;
 }
 
 auto FirewallBackend::getRuleDetails(const ctx_t &context,
@@ -184,19 +184,19 @@ auto FirewallBackend::getRule(const ctx_t &context,
 
 auto FirewallBackend::removeChain(const ctx_t &context) -> bool {
   if (context->level_ == FirewallLevel::CHAIN) {
-    return iptc_delete_chain(context->chain_.c_str(),
-                             handles_.at(context->table_)) == 0;
+    if (iptc_delete_chain(context->chain_.c_str(),
+                          handles_.at(context->table_)) == 0) {
+      auto msg =
+          fmt::format("Error deleting chain: {}\n", iptc_strerror(errno));
+      context->setLastError(msg);
+      return false;
+    }
+
+    return true;
   }
 
-  if (context->level_ == FirewallLevel::OVERALL) {
-    auto *handle = handles_.at(context->table_);
-    (void)handle;
-  } else {
-    yuiError() << "Cannot remove chain from other." << endl;
-    return false;
-  }
-
-  return true;
+  context->setLastError("Remove chain can only be called from chain level.");
+  return false;
 }
 
 auto FirewallBackend::removeRule(const ctx_t &context, int index) -> bool {
