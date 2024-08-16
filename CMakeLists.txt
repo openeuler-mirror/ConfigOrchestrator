@@ -7,6 +7,9 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 
+# use project specific cmake modules
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
+
 # assert usage of libfmt
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13.0)
@@ -122,11 +125,24 @@ find_library(IPTC_LIB ip4tc ip6tc REQUIRED)
 find_path(IPTC_INCLUDE_DIR libiptc/libiptc.h REQUIRED)
 include_directories(${IPTC_INCLUDE_DIR})
 
+#libdnf
+find_path(LIBDNF_INCLUDE_DIR NAMES libdnf/libdnf.h)
+find_library(LIBDNF_LIBRARY NAMES dnf)
+include_directories(${LIBDNF_INCLUDE_DIRS})
+
+# glib, required for libdnf
+find_package(GLIB REQUIRED)
+include_directories(${GLIB_INCLUDE_DIRS})
+
 
 find_package(fmt)
 
 # if new lib to be linked, add it to the ALL_LIBS variable
-set(ALL_LIBS ${YUI_LIB} ${IPTC_LIB} fmt::fmt)
+set(ALL_LIBS    ${YUI_LIB}
+                ${IPTC_LIB}
+                fmt::fmt
+                ${LIBDNF_LIBRARY}
+)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} ${ALL_LIBS})

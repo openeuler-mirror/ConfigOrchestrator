@@ -2,7 +2,7 @@
 
 class PackageManagerBackend : public ConfigBackendBase {
 public:
-  PackageManagerBackend() = default;
+  PackageManagerBackend();
 
 private:
 };
