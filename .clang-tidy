@@ -16,5 +16,3 @@ Checks: >
 WarningsAsErrors: "*"
 HeaderFilterRegex: ""
 FormatStyle: none
-ExcludePaths:
-  - '^.*_deps/.*'
