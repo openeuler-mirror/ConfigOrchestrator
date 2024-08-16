@@ -117,7 +117,7 @@ private:
 
   virtual auto userHandleEvent(YEvent *event) -> HandleResult = 0;
 
-  [[nodiscard]] auto checkExit() const -> bool;
+  [[nodiscard]] static auto checkExit() -> bool;
 };
 
 #endif // ui_base_H

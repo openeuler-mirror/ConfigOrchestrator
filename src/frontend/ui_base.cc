@@ -135,7 +135,7 @@ auto UIBase::display() -> void {
   userDisplay(main_dialog_, {feature_layout_, user_control_layout_});
 }
 
-auto UIBase::checkExit() const -> bool {
+auto UIBase::checkExit() -> bool {
   const static string msg_head = "There are unsaved changes:";
   const static string msg_tail = "Do you want to exit?";
 

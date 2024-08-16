@@ -6,6 +6,7 @@
 #include <random>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "backend/firewall/chain_request.h"
@@ -21,6 +22,9 @@ using std::make_optional;
 using std::make_shared;
 using std::make_tuple;
 using std::nullopt;
+
+constexpr int RANDOM_SEED = 42;
+constexpr int ADD_DELRULE_RAND_SUM = 1000;
 
 class FirewallTestFixture : public ::testing::Test {
 protected:
@@ -61,7 +65,7 @@ void TestTableContext(const shared_ptr<FirewallBackend> &fwb,
   }
 }
 
-void TestChainAddDel(const shared_ptr<FirewallBackend> &fwb,
+void TestChainAddDel(const shared_ptr<FirewallBackend> &fwb, // NOLINT
                      const string &table) {
   auto ctx = make_shared<FirewallContext>();
   ctx = fwb->createContext(ctx, table);
@@ -141,7 +145,8 @@ TEST_F(FirewallTestFixture, addDelChain) {
 struct FirewallTestAddDelRuleData {
   FirewallTestAddDelRuleData(string a, string b,
                              std::shared_ptr<RuleRequest> req)
-      : table(a), chain(b), rule_request(req) {}
+      : table(std::move(a)), chain(std::move(b)), rule_request(std::move(req)) {
+  }
 
   string table;
   string chain;
@@ -154,7 +159,7 @@ class FirewallTestAddDelRule
 protected:
   void SetUp() override {
     fwb = make_shared<FirewallBackend>();
-    gen.seed(42);
+    gen.seed(RANDOM_SEED);
   }
 
   void TearDown() override {}
@@ -227,7 +232,7 @@ TEST_P(FirewallTestAddDelRule, AddThenDelRule) {
       }
 
       ASSERT_EQ(rule->matches_.size(), param.rule_request->matches_.size());
-      if (rule->matches_.size() > 0) {
+      if (!rule->matches_.empty()) {
         ASSERT_TRUE(rule->matches_[0].dst_port_range_.has_value());
         ASSERT_TRUE(rule->matches_[0].src_port_range_.has_value());
 
@@ -375,8 +380,6 @@ TEST_P(FirewallTestAddDelRule, AddThenDelRule) {
 
 auto GenerateRandomTestData(size_t count)
     -> vector<FirewallTestAddDelRuleData> {
-  constexpr int RANDOM_SEED = 42;
-
   vector<FirewallTestAddDelRuleData> data;
   std::mt19937 gen{RANDOM_SEED};
 
@@ -387,15 +390,15 @@ auto GenerateRandomTestData(size_t count)
   static const vector<string> chains = {"INPUT", "OUTPUT"};
 
   for (size_t i = 0; i < count; ++i) {
+    // TODO(yiyan): finish random rule add/del test
     std::uniform_int_distribution<int> dist(1, 2);
   }
 
   return data;
 }
 
-static const int testDFirewallTestAddDelRuleInstantDataSize = 1000;
 std::vector<FirewallTestAddDelRuleData> testDFirewallTestAddDelRuleInstantData =
-    GenerateRandomTestData(testDFirewallTestAddDelRuleInstantDataSize);
+    GenerateRandomTestData(ADD_DELRULE_RAND_SUM);
 
 INSTANTIATE_TEST_CASE_P(
     FirewallTestAddDelRuleFuzzingInstant, FirewallTestAddDelRule,
