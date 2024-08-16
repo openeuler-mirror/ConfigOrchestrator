@@ -311,7 +311,7 @@ TEST_P(FirewallTestAddDelRule, AddThenDelRule) {
         }
 
         ASSERT_EQ(rule->matches_.size(), param.rule_request->matches_.size());
-        if (rule->matches_.size() > 0) {
+        if (!rule->matches_.empty()) {
           ASSERT_TRUE(rule->matches_[0].dst_port_range_.has_value());
           ASSERT_TRUE(rule->matches_[0].src_port_range_.has_value());
 
@@ -373,9 +373,12 @@ TEST_P(FirewallTestAddDelRule, AddThenDelRule) {
   }
 }
 
-vector<FirewallTestAddDelRuleData> GenerateRandomTestData(size_t count) {
+auto GenerateRandomTestData(size_t count)
+    -> vector<FirewallTestAddDelRuleData> {
+  constexpr int RANDOM_SEED = 42;
+
   vector<FirewallTestAddDelRuleData> data;
-  std::mt19937 gen{42};
+  std::mt19937 gen{RANDOM_SEED};
 
   static const auto tables = FirewallBackend::getTableNames();
   static const auto targets = iptTargets();
@@ -384,14 +387,15 @@ vector<FirewallTestAddDelRuleData> GenerateRandomTestData(size_t count) {
   static const vector<string> chains = {"INPUT", "OUTPUT"};
 
   for (size_t i = 0; i < count; ++i) {
-    std::uniform_int_distribution<int> dist(1, 100);
+    std::uniform_int_distribution<int> dist(1, 2);
   }
 
   return data;
 }
 
+static const int testDFirewallTestAddDelRuleInstantDataSize = 1000;
 std::vector<FirewallTestAddDelRuleData> testDFirewallTestAddDelRuleInstantData =
-    GenerateRandomTestData(1000);
+    GenerateRandomTestData(testDFirewallTestAddDelRuleInstantDataSize);
 
 INSTANTIATE_TEST_CASE_P(
     FirewallTestAddDelRuleFuzzingInstant, FirewallTestAddDelRule,

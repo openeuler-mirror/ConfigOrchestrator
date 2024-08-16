@@ -193,7 +193,7 @@ auto FirewallConfig::fresh(YDialog *main_dialog, DisplayLayout layout) -> bool {
           return HandleResult::SUCCESS; /* cancel */
         }
 
-        if (!firewall_backend_->updateRule(firewall_context_, request, index)) {
+        if (!firewall_backend_->updateRule(firewall_context_, request)) {
           auto msg = fmt::format(
               "Failed to update chain: #{}\nChain brief: {}\nError: {}\n",
               index, iptable_child, firewall_context_->getLastError());
@@ -321,7 +321,7 @@ auto FirewallConfig::getPageName() const -> string {
   return firewall_context_->serialize();
 }
 
-auto FirewallConfig::createUpdateRule(optional<int> index)
+auto FirewallConfig::createUpdateRule(optional<int> index) // NOLINT
     -> shared_ptr<RuleRequest> {
   static constexpr int button_space = 5;
 

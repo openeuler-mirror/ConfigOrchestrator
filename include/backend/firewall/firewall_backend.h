@@ -61,8 +61,8 @@ public:
   auto insertRule(const ctx_t &context,
                   const shared_ptr<RuleRequest> &request) -> bool;
 
-  auto updateRule(const ctx_t &context, const shared_ptr<RuleRequest> &request,
-                  int index) -> bool;
+  auto updateRule(const ctx_t &context,
+                  const shared_ptr<RuleRequest> &request) -> bool;
 
   auto getRule(const ctx_t &context, int index) -> shared_ptr<RuleRequest>;
 

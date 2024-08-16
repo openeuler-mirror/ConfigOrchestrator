@@ -212,9 +212,8 @@ auto FirewallBackend::removeRule(const ctx_t &context, int index) -> bool {
   return true;
 }
 
-auto FirewallBackend::updateRule(const ctx_t &context,
-                                 const shared_ptr<RuleRequest> &request,
-                                 int index) -> bool {
+auto FirewallBackend::updateRule(
+    const ctx_t &context, const shared_ptr<RuleRequest> &request) -> bool {
   if (context->level_ != FirewallLevel::CHAIN) {
     context->setLastError("Cannot update rule over table.");
     return false;
@@ -332,7 +331,7 @@ auto FirewallBackend::serializeRule(iptc_handle *handle,
   if (rule->target_offset != rule->next_offset) {
     const auto *target = reinterpret_cast<const ipt_entry_target *>(
         reinterpret_cast<const char *>(rule) + rule->target_offset);
-    auto target_name = iptc_get_target(rule, handle);
+    const auto *target_name = iptc_get_target(rule, handle);
     result += fmt::format("Target Name: {}\n", target_name);
     result += fmt::format("Target Size: {}\n", target->u.user.target_size);
   }
