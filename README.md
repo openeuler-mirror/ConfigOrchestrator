@@ -1,10 +1,8 @@
-# Control Panel
+# Config Orchestrator
 
-WIP for OpenEuler. By iyenli.
+## 构建
 
-## Build
-
-Install dependencies:
+安装依赖：
 
 ```bash
 cd deps
@@ -12,7 +10,7 @@ cd deps
 sudo ./build-all install
 ```
 
-Build Control Panel:
+构建项目：
 
 ```bash
 $ mkdir -p build && cd build
@@ -23,19 +21,18 @@ $ cmake --build . --parallel
 $ ./controlpanel
 ```
 
-## Test
+## 测试
 
-We use gtest for testing. You can test all cases by:
+我们使用 gtest 进行测试。你可以通过以下命令测试所有用例：
 
 ```bash
 ctest
 ```
-## How to add a configuration
+## 如何添加配置
 
 
-## Code Conduct
+## 代码规范
 
-- use fmt for logging
-- use smart pointer as possible
-- use gtest for testing
-
+- 使用 fmt 进行日志输出
+- 尽可能使用智能指针
+- 使用 gtest 进行测试
