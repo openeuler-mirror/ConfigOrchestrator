@@ -1,0 +1,3 @@
+[submodule "deps/libyui"]
+	path = deps/libyui
+	url = https://github.com/libyui/libyui.git
