@@ -1,37 +1,38 @@
-# ConfigOrchestrator
+# Config Orchestrator
 
-#### 介绍
-Multi-view system config framework
+## 构建
 
-#### 软件架构
-软件架构说明
+安装依赖：
+
+```bash
+cd deps
+./build-all
+sudo ./build-all install
+```
+
+构建项目：
+
+```bash
+$ mkdir -p build && cd build
+
+$ cmake -DCMAKE_BUILD_TYPE=Debug ..
+$ cmake --build . --parallel
+
+$ ./controlpanel
+```
+
+## 测试
+
+我们使用 gtest 进行测试。你可以通过以下命令测试所有用例：
+
+```bash
+ctest
+```
+## 如何添加配置
 
 
-#### 安装教程
+## 代码规范
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
-
-#### 使用说明
-
-1.  xxxx
-2.  xxxx
-3.  xxxx
-
-#### 参与贡献
-
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
-
-
-#### 特技
-
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
-5.  Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+- 使用 fmt 进行日志输出
+- 尽可能使用智能指针
+- 使用 gtest 进行测试
